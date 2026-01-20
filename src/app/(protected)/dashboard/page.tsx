@@ -91,7 +91,7 @@ export default function DashboardPage() {
                         <Calendar className="w-8 h-8 mb-2 opacity-50" />
                         <p>No tienes clases reservadas</p>
                     </div>
-                    <Button variant="outline" className="w-full text-xs mt-auto">VER HORARIOS</Button>
+                    <Button variant="outline" className="w-full text-xs mt-auto" onClick={() => router.push('/classes')}>VER HORARIOS</Button>
                 </Card>
 
                 <Card title="Estadísticas">

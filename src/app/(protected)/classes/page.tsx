@@ -12,20 +12,30 @@ const DAYS = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', '
 export default function UserClassesPage() {
     const { user } = useAppStore();
     const [classes, setClasses] = useState<GymClass[]>([]);
+    const [bookedClassIds, setBookedClassIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<string | null>(null);
 
     const loadClasses = async () => {
         setLoading(true);
-        const data = await GymService.getClasses();
-        // Sort by time
-        setClasses(data.sort((a, b) => a.time.localeCompare(b.time)));
-        setLoading(false);
+        try {
+            const [data, booked] = await Promise.all([
+                GymService.getClasses(),
+                user ? GymService.getUserBookings(user.uid) : Promise.resolve([])
+            ]);
+            // Sort by time
+            setClasses(data.sort((a, b) => a.time.localeCompare(b.time)));
+            setBookedClassIds(booked);
+        } catch (error) {
+            console.error("Error loading classes:", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         loadClasses();
-    }, []);
+    }, [user]);
 
     const handleBook = async (gymClass: GymClass) => {
         if (!user) return;
@@ -75,9 +85,10 @@ export default function UserClassesPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {dayClasses.map(c => {
                                         const isFull = c.bookedCount >= c.capacity;
+                                        const isBooked = bookedClassIds.includes(c.id);
 
                                         return (
-                                            <Card key={c.id} className="relative group overflow-hidden border-neutral-800 hover:border-brand-green/30 transition-colors">
+                                            <Card key={c.id} className={`relative group overflow-hidden border-neutral-800 transition-colors ${isBooked ? 'border-brand-green/50 bg-brand-green/5' : 'hover:border-brand-green/30'}`}>
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div>
                                                         <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-green uppercase bg-brand-green/10 px-2 py-1 rounded mb-2">
@@ -88,6 +99,7 @@ export default function UserClassesPage() {
                                                             <User size={14} className="mr-2" /> {c.coachName}
                                                         </div>
                                                     </div>
+                                                    {isBooked && <CheckCircle className="text-brand-green" size={20} />}
                                                 </div>
 
                                                 <div className="space-y-3">
@@ -106,13 +118,14 @@ export default function UserClassesPage() {
 
                                                     <Button
                                                         onClick={() => handleBook(c)}
-                                                        disabled={isFull || processingId === c.id || user?.membershipStatus !== 'active'}
-                                                        className={`w-full mt-4 ${isFull ? 'bg-neutral-800 text-gray-500 cursor-not-allowed border-none' : ''}`}
+                                                        disabled={isFull || isBooked || processingId === c.id || user?.membershipStatus !== 'active'}
+                                                        className={`w-full mt-4 ${isBooked ? 'bg-brand-green/20 text-brand-green border-brand-green/50 hover:bg-brand-green/30' : isFull ? 'bg-neutral-800 text-gray-500 cursor-not-allowed border-none' : ''}`}
                                                     >
-                                                        {processingId === c.id ? 'RESERVANDO...' : isFull ? 'AGOTADO' : 'RESERVAR CUPO'}
+                                                        {processingId === c.id ? 'RESERVANDO...' : isBooked ? 'YA INSCRITO' : isFull ? 'AGOTADO' : 'RESERVAR CUPO'}
                                                     </Button>
                                                 </div>
                                             </Card>
+
                                         );
                                     })}
                                 </div>

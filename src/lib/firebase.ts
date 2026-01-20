@@ -25,7 +25,8 @@ import {
     deleteDoc,
     Firestore,
     Timestamp,
-    runTransaction
+    runTransaction,
+    collectionGroup
 } from 'firebase/firestore';
 import { UserProfile, Payment, GymClass, Plan, Staff, GymConfig } from '@/types';
 
@@ -319,22 +320,15 @@ export class GymService {
     }
 
     static async getUserBookings(uid: string): Promise<string[]> {
-        // This is tricky without a separate collection or collection group query. 
-        // For MVP, we'll fetch classes and check distinct logic or just not show "My Classes" properly yet on the user side without querying all classes.
-        // Better: client side checks if user is in 'attendees' of the class? No, that's too many reads.
-        // Efficient way: store 'bookedClasses' array on user profile? Yes, simpler.
-        // Logic: When booking, also update user profile.
-        // Let's stick to the requested feature: "User sees classes and can book". We can check "isBooked" by trying to fetch the attendee doc or querying all classes user is in. 
-        // For now, let's keep it simple: Client checks availability. 'isBooked' state might need a helper if we want to show "You are booked" in the list.
-
-        // Let's implement a simpler "am I booked?" check that the client calls per class? No, too many calls.
-        // Let's do: collectionGroup query on 'attendees' where uid == user.uid.
         if (isOnline && db) {
-            const q = query(collection(db, 'classes'), where('visible', '==', true)); // we can't easily query subcollections like this without Composite Index if we filter classes. 
-            // Actually, collectionGroup is best.
-            // const q = query(collectionGroup(db, 'attendees'), where('uid', '==', uid));
-            // But 'attendees' is a subcollection name.
-            // simpler: Just return empty for now, handle logic in components if needed or rely on 'bookClass' checking existence.
+            try {
+                const bookingsQuery = query(collectionGroup(db, 'attendees'), where('uid', '==', uid));
+                const snapshot = await getDocs(bookingsQuery);
+                return snapshot.docs.map(doc => doc.ref.parent.parent?.id).filter((id): id is string => !!id);
+            } catch (error) {
+                console.error("Error fetching user bookings:", error);
+                return [];
+            }
         }
         return [];
     }

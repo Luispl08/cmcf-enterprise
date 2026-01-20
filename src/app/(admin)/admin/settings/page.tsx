@@ -28,6 +28,14 @@ export default function AdminSettingsPage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!config) return;
+
+        // Security Check
+        const password = prompt("Ingrese la contraseña de seguridad para guardar cambios:");
+        if (password !== 'admin123*') {
+            alert("Contraseña incorrecta. No se guardaron los cambios.");
+            return;
+        }
+
         setIsSaving(true);
         try {
             await GymService.updateGymConfig(config);

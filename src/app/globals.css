@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --color-background: #050505;
+  --color-foreground: #e5e5e5;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-brand-green: #39ff14;
+  --color-brand-dark: #1a1a1a;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --font-display: 'Oswald', sans-serif;
+  --font-sans: 'Inter', sans-serif;
+
+  --animate-fade-in: fadeIn 0.5s ease-out;
+  --animate-slide-down: slideDown 0.3s ease-out;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Custom Utilities */
+@layer utilities {
+  .bg-noise {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .bg-noise::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .btn-neon {
+    @apply bg-brand-green text-black font-display font-bold italic px-6 py-3 hover:shadow-[0_0_15px_var(--color-brand-green)] hover:bg-white transition-all duration-300 transform skew-x-[-10deg];
+  }
+
+  .input-industrial {
+    @apply bg-black border border-gray-800 p-3 text-white focus:outline-none focus:border-brand-green transition-colors w-full;
+  }
+}
+
+/* Base Styles */
+@layer base {
+  body {
+    @apply bg-background text-foreground overflow-x-hidden font-sans;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    @apply font-display italic uppercase;
+  }
 }

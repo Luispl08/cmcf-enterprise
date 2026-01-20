@@ -107,8 +107,11 @@ export class GymService {
         if (isOnline && db) {
             const q = query(collection(db, 'plans'), where('visible', '==', true));
             const snap = await getDocs(q);
-            return snap.docs.map(d => ({ id: d.id, ...d.data() } as Plan));
+            if (!snap.empty) {
+                return snap.docs.map(d => ({ id: d.id, ...d.data() } as Plan));
+            }
         }
+        // Fallback or Offline
         return [
             {
                 id: 'lite',

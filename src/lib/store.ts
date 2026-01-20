@@ -9,6 +9,7 @@ interface AppState {
 
     // Actions
     login: (u: UserProfile) => void;
+    setUser: (u: UserProfile | null) => void;
     logout: () => void;
     setLoading: (l: boolean) => void;
 }
@@ -19,6 +20,7 @@ export const useAppStore = create<AppState>((set) => ({
     isAdmin: false,
 
     login: (user) => set({ user, isAdmin: user.role === 'admin', isLoading: false }),
+    setUser: (user) => set({ user }), // For updates without full login logic
     logout: () => {
         GymService.logout();
         set({ user: null, isAdmin: false });

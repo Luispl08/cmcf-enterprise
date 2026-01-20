@@ -7,60 +7,92 @@ import { Plan } from '@/types';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
-import { Check, CreditCard, Lock } from 'lucide-react';
+import { Check, CreditCard, Lock, Smartphone, Banknote, Landmark, QrCode } from 'lucide-react';
 
 interface PaymentWizardProps {
     selectedPlan: Plan;
 }
 
-type Step = 'summary' | 'payment' | 'success';
+type Step = 'summary' | 'method' | 'details' | 'success';
+type PaymentMethod = 'credit_card' | 'zelle' | 'pago_movil' | 'binance' | 'transferencia' | 'efectivo';
+
+const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: any; instructions: string }[] = [
+    { id: 'zelle', label: 'Zelle', icon: Smartphone, instructions: 'Enviar a: pagosc mcf@gmail.com / Titular: CMCF Enterprise LLC' },
+    { id: 'pago_movil', label: 'Pago Móvil', icon: Smartphone, instructions: '0414-1234567 / CI: 12345678 / Banco: Mercantil' },
+    { id: 'binance', label: 'Binance Pay', icon: QrCode, instructions: 'Pay ID: 123456789 / Email: crypto@cmcf.com' },
+    { id: 'transferencia', label: 'Transferencia', icon: Landmark, instructions: 'Banco Mercantil / Cuenta: 0105...1234 / RIF: J-123456789' },
+    { id: 'efectivo', label: 'Efectivo', icon: Banknote, instructions: 'Pagar directamente en recepción. Traer comprobante.' },
+    { id: 'credit_card', label: 'Tarjeta (Stripe)', icon: CreditCard, instructions: 'Procesamiento seguro vía Stripe' },
+];
 
 export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
     const router = useRouter();
     const { user } = useAppStore();
     const [step, setStep] = useState<Step>('summary');
+    const [method, setMethod] = useState<PaymentMethod | null>(null);
+    const [reference, setReference] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handlePayment = async (e: React.FormEvent) => {
+    const handleMethodSelect = (m: PaymentMethod) => {
+        setMethod(m);
+        setStep('details');
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            if (!user) return;
-            // Mock payment
+            if (!user || !method) return;
+
+            // For manual methods, status is 'verification'. For Credit Card (Mock), it could be 'approved' immediately but let's stick to verification for uniformity in this enterprise flow or simulate instant.
+            // User requested: "verification la hace el admin manualmente" -> imply all manual methods.
+            // Let's assume Credit Card is instant (Mock) and others are manual.
+
+            const isInstant = method === 'credit_card';
+            const status = isInstant ? 'approved' : 'verification';
+
             await GymService.submitPayment({
                 userId: user.uid,
                 amount: selectedPlan.price,
-                method: 'credit_card',
+                method: method,
                 description: `Suscripción ${selectedPlan.title}`,
                 userEmail: user.email,
                 currency: selectedPlan.currency,
-                reference: 'CC-' + Date.now(),
-                isPartial: false
+                reference: isInstant ? `CC-${Date.now()}` : reference,
+                status: status,
+                isPartial: false,
+                timestamp: Date.now()
             });
-            // Simulate processing time
+
+            // Simulate processing
             setTimeout(() => {
                 setStep('success');
                 setIsLoading(false);
-            }, 1500);
+            }, 1000);
         } catch (error) {
             setIsLoading(false);
-            alert('Error en el pago');
+            alert('Error al registrar el pago');
         }
     };
 
     if (step === 'success') {
+        const isVerification = method !== 'credit_card';
         return (
             <Card className="text-center py-12 animate-fade-in" noPadding>
                 <div className="flex justify-center mb-6">
-                    <div className="w-20 h-20 bg-brand-green rounded-full flex items-center justify-center">
-                        <Check className="w-10 h-10 text-black" />
+                    <div className={`w-20 h-20 rounded-full flex items-center justify-center ${isVerification ? 'bg-yellow-500' : 'bg-brand-green'}`}>
+                        {isVerification ? <Lock className="w-10 h-10 text-black" /> : <Check className="w-10 h-10 text-black" />}
                     </div>
                 </div>
-                <h2 className="text-3xl font-display italic text-white mb-2">¡PAGO EXITOSO!</h2>
+                <h2 className="text-3xl font-display italic text-white mb-2">
+                    {isVerification ? 'PAGO EN REVISIÓN' : '¡PAGO EXITOSO!'}
+                </h2>
                 <p className="text-gray-400 mb-8 max-w-sm mx-auto">
-                    Bienvenido a la élite. Tu plan <strong>{selectedPlan.title}</strong> está activo.
+                    {isVerification
+                        ? 'Tu pago ha sido registrado y está pendiente de verificación por un administrador. Te notificaremos cuando se apruebe.'
+                        : `Bienvenido a la élite. Tu plan ${selectedPlan.title} está activo.`}
                 </p>
-                <Button onClick={() => router.push('/dashboard')} size="lg">
+                <Button onClick={() => router.push('/dashboard')} size="lg" variant={isVerification ? 'outline' : 'primary'}>
                     IR AL DASHBOARD
                 </Button>
             </Card>
@@ -68,8 +100,8 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
-            {/* Left: Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in max-w-5xl mx-auto">
+            {/* Order Summary (Always Visible) */}
             <Card className="h-fit">
                 <h3 className="font-display italic text-gray-400 text-sm tracking-widest mb-4">RESUMEN DE ORDEN</h3>
                 <div className="flex justify-between items-end border-b border-gray-800 pb-4 mb-4">
@@ -87,63 +119,94 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                             <Check className="text-brand-green w-4 h-4 mr-2" /> {f}
                         </li>
                     ))}
-                    <li className="flex items-center text-sm text-gray-300">
-                        <Check className="text-brand-green w-4 h-4 mr-2" /> Acceso Inmediato
-                    </li>
                 </ul>
                 <div className="bg-neutral-800/50 p-4 rounded text-xs text-gray-400 flex items-start">
                     <Lock className="w-4 h-4 mr-2 flex-shrink-0" />
-                    Transacción segura y encriptada. Puedes cancelar en cualquier momento desde tu panel de control.
+                    Transacción segura y encriptada.
                 </div>
             </Card>
 
-            {/* Right: Payment Form */}
+            {/* Steps Area */}
             <Card>
-                <h3 className="font-display italic text-gray-400 text-sm tracking-widest mb-6">MÉTODO DE PAGO</h3>
+                {step === 'summary' && (
+                    <div className="space-y-6">
+                        <h3 className="font-display italic text-white text-xl">CONFIRMAR COMPRA</h3>
+                        <p className="text-gray-400 text-sm">Estás a un paso de unirte. Selecciona cómo deseas pagar.</p>
+                        <Button onClick={() => setStep('method')} className="w-full" size="lg">
+                            CONTINUAR A PAGO
+                        </Button>
+                    </div>
+                )}
 
-                <form onSubmit={handlePayment} className="space-y-6">
-                    <div className="flex space-x-4 mb-6">
-                        <div className="flex-1 bg-brand-green/10 border border-brand-green text-brand-green p-3 flex items-center justify-center cursor-pointer">
-                            <CreditCard className="mr-2" /> Tarjeta
-                        </div>
-                        <div className="flex-1 bg-neutral-900 border border-neutral-700 text-gray-500 p-3 flex items-center justify-center opacity-50 cursor-not-allowed">
-                            PayPal
+                {step === 'method' && (
+                    <div>
+                        <h3 className="font-display italic text-gray-400 text-sm tracking-widest mb-6">SELECCIONA MÉTODO</h3>
+                        <div className="grid grid-cols-1 gap-3">
+                            {PAYMENT_METHODS.map((m) => (
+                                <button
+                                    key={m.id}
+                                    onClick={() => handleMethodSelect(m.id)}
+                                    className="flex items-center p-4 border border-gray-800 hover:border-brand-green/50 hover:bg-white/5 transition-all text-left group"
+                                >
+                                    <div className="bg-neutral-800 p-2 rounded mr-4 text-brand-green group-hover:text-white transition-colors">
+                                        <m.icon size={20} />
+                                    </div>
+                                    <div>
+                                        <span className="block font-bold text-white uppercase">{m.label}</span>
+                                        <span className="text-xs text-gray-500">{m.id === 'credit_card' ? 'Automático' : 'Verificación Manual'}</span>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
                     </div>
+                )}
 
-                    <Input
-                        label="Nombre en la tarjeta"
-                        placeholder="COMO APARECE EN LA TARJETA"
-                        required
-                    />
+                {step === 'details' && method && (
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="flex items-center mb-6">
+                            <button type="button" onClick={() => setStep('method')} className="text-xs text-gray-500 hover:text-white underline mr-4">
+                                VOLVER
+                            </button>
+                            <h3 className="font-display italic text-white uppercase">DETALLES: <span className="text-brand-green">{PAYMENT_METHODS.find(m => m.id === method)?.label}</span></h3>
+                        </div>
 
-                    <Input
-                        label="Número de tarjeta"
-                        placeholder="0000 0000 0000 0000"
-                        maxLength={19}
-                        required
-                    />
+                        {/* Instructions Box */}
+                        <div className="bg-brand-green/5 border border-brand-green/20 p-4 rounded mb-6">
+                            <p className="text-xs text-brand-green font-bold uppercase mb-1">INSTRUCCIONES DE PAGO:</p>
+                            <p className="text-sm text-gray-300 font-mono">
+                                {PAYMENT_METHODS.find(m => m.id === method)?.instructions}
+                            </p>
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <Input
-                            label="Expiración"
-                            placeholder="MM/YY"
-                            maxLength={5}
-                            required
-                        />
-                        <Input
-                            label="CVC"
-                            placeholder="123"
-                            maxLength={3}
-                            type="password"
-                            required
-                        />
-                    </div>
+                        {method === 'credit_card' ? (
+                            <>
+                                <Input label="Titular" placeholder="NOMBRE EN TARJETA" required />
+                                <Input label="Número" placeholder="0000 0000 0000 0000" required />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Input label="Exp" placeholder="MM/YY" required />
+                                    <Input label="CVC" placeholder="123" type="password" required />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <Input
+                                    label="NÚMERO DE REFERENCIA / COMPROBANTE"
+                                    placeholder="Ej. 12345678"
+                                    required
+                                    value={reference}
+                                    onChange={(e) => setReference(e.target.value)}
+                                />
+                                <p className="text-xs text-gray-500">
+                                    Por favor ingresa el número de confirmación de tu transacción para que podamos verificarla.
+                                </p>
+                            </>
+                        )}
 
-                    <Button type="submit" className="w-full mt-4" size="lg" disabled={isLoading}>
-                        {isLoading ? 'PROCESANDO...' : `PAGAR ${selectedPlan.currency}${selectedPlan.price}`}
-                    </Button>
-                </form>
+                        <Button type="submit" className="w-full mt-6" size="lg" disabled={isLoading}>
+                            {isLoading ? 'ENVIANDO...' : 'REPORTAR PAGO'}
+                        </Button>
+                    </form>
+                )}
             </Card>
         </div>
     );

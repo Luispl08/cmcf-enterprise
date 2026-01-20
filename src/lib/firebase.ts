@@ -22,6 +22,7 @@ import {
     getDocs,
     serverTimestamp,
     increment,
+    deleteDoc,
     Firestore,
     Timestamp
 } from 'firebase/firestore';
@@ -125,13 +126,9 @@ export class GymService {
     }
 
     // --- SUBMIT PAYMENT ---
-    static async submitPayment(payment: Omit<Payment, 'id' | 'timestamp' | 'status'>): Promise<void> {
+    static async submitPayment(payment: Omit<Payment, 'id'>): Promise<void> {
         if (isOnline && db) {
-            await addDoc(collection(db, 'payments'), {
-                ...payment,
-                timestamp: Date.now(),
-                status: 'pending'
-            });
+            await addDoc(collection(db, 'payments'), payment);
         } else {
             console.log("Mock Payment Submitted:", payment);
         }
@@ -140,20 +137,75 @@ export class GymService {
     // --- ADMIN ---
     static async getPendingPayments(): Promise<Payment[]> {
         if (isOnline && db) {
-            const q = query(collection(db, 'payments'), where('status', '==', 'pending'), orderBy('timestamp', 'desc'));
+            const q = query(collection(db, 'payments'), where('status', 'in', ['pending', 'verification']), orderBy('timestamp', 'desc'));
             const snap = await getDocs(q);
             return snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
         }
         return [];
     }
 
+    static async updatePaymentStatus(paymentId: string, status: Payment['status'], feedback?: string): Promise<void> {
+        if (isOnline && db) {
+            await updateDoc(doc(db, 'payments', paymentId), {
+                status,
+                feedback: feedback || null
+            });
+        }
+    }
+
+    static async getUsers(): Promise<UserProfile[]> {
+        if (isOnline && db) {
+            const snap = await getDocs(collection(db, 'users'));
+            return snap.docs.map(d => d.data() as UserProfile);
+        }
+        // Mock Users
+        return [
+            this.mockProfile('user', 'john@connor.com'),
+            this.mockProfile('admin', 'sarah@connor.com')
+        ];
+    }
+
+    static async updateUser(uid: string, data: Partial<UserProfile>): Promise<void> {
+        if (isOnline && db) {
+            await updateDoc(doc(db, 'users', uid), data);
+        }
+    }
+
+    // --- CLASSES ---
+    static async getClasses(): Promise<GymClass[]> {
+        if (isOnline && db) {
+            const snap = await getDocs(collection(db, 'classes'));
+            return snap.docs.map(d => ({ id: d.id, ...d.data() } as GymClass));
+        }
+        // Mock Classes
+        return [
+            { id: '1', day: 'LUNES', time: '07:00 AM', name: 'CROSSFIT', coachId: '1', coachName: 'Coach Mike', capacity: 20, bookedCount: 5 },
+            { id: '2', day: 'LUNES', time: '06:00 PM', name: 'FUNCTIONAL', coachId: '2', coachName: 'Coach Sarah', capacity: 15, bookedCount: 15 },
+            { id: '3', day: 'MARTES', time: '07:00 AM', name: 'CROSSFIT', coachId: '1', coachName: 'Coach Mike', capacity: 20, bookedCount: 2 }
+        ];
+    }
+
+    static async addClass(gymClass: Omit<GymClass, 'id'>): Promise<void> {
+        if (isOnline && db) {
+            await addDoc(collection(db, 'classes'), gymClass);
+        }
+    }
+
+    static async deleteClass(classId: string): Promise<void> {
+        if (isOnline && db) {
+            await deleteDoc(doc(db, 'classes', classId));
+        }
+    }
+
     // --- HELPERS ---
     private static mockProfile(role: 'admin' | 'user', email: string): UserProfile {
         return {
-            uid: 'mock-' + Date.now(),
+            uid: 'mock-' + Date.now() + Math.random(),
             email,
             role,
-            fullName: role === 'admin' ? 'Administrador' : 'Usuario Mock',
+            fullName: role === 'admin' ? 'Sarah Connor' : 'John Connor',
+            cedula: 'V-12345678',
+            phone: '0414-1234567',
             membershipStatus: 'active',
             membershipExpiry: Date.now() + 86400000 * 15,
             balance: 0,

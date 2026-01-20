@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'user';
+export type UserRole = 'admin' | 'user' | 'staff';
 
 export interface UserProfile {
   uid: string;
@@ -7,9 +7,10 @@ export interface UserProfile {
   fullName: string;
   phone?: string;
   cedula?: string;
+  dob?: string; // ISO Date YYYY-MM-DD
   instagram?: string;
   address?: string;
-  membershipStatus: 'active' | 'inactive';
+  membershipStatus: 'active' | 'inactive' | 'pending'; // pending = awaiting payment verification
   membershipExpiry: number | null; // Timestamp (seconds) or Date.now()
   balance: number;
   joinedAt: number;
@@ -19,17 +20,18 @@ export interface UserProfile {
 export interface Payment {
   id: string;
   userId: string;
-  userEmail: string;
+  userEmail: string; // Added for admin reference
   amount: number;
   currency: string;
   method: 'zelle' | 'pago_movil' | 'efectivo' | 'transferencia' | 'binance' | 'credit_card';
   reference: string;
   description?: string;
   screenshotUrl?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'verification';
   rejectionReason?: string;
   isPartial: boolean; // If true, only adds balance, doesn't renew membership
   timestamp: number;
+  feedback?: string;
 
   // Specific fields
   accountHolder?: string; // Zelle

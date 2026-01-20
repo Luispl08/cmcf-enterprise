@@ -24,7 +24,8 @@ import {
     increment,
     deleteDoc,
     Firestore,
-    Timestamp
+    Timestamp,
+    runTransaction
 } from 'firebase/firestore';
 import { UserProfile, Payment, GymClass, Plan, Staff, GymConfig } from '@/types';
 
@@ -241,153 +242,144 @@ export class GymService {
         }
     }
 
-    deleteDoc,
-    Firestore,
-    Timestamp,
-    runTransaction
-} from 'firebase/firestore';
-import { UserProfile, Payment, GymClass, Plan, Staff, GymConfig } from '@/types';
-
-// ... (existing code) ...
-
     // --- CLASSES ---
-    static async getClasses(): Promise < GymClass[] > {
-    if(isOnline && db) {
-    const snap = await getDocs(collection(db, 'classes'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as GymClass));
-}
-// Mock Classes
-return [
-    { id: '1', day: 'LUNES', time: '07:00 AM', name: 'CROSSFIT', coachId: '1', coachName: 'Coach Mike', capacity: 20, bookedCount: 5 },
-    { id: '2', day: 'LUNES', time: '06:00 PM', name: 'FUNCTIONAL', coachId: '2', coachName: 'Coach Sarah', capacity: 15, bookedCount: 15 },
-    { id: '3', day: 'MARTES', time: '07:00 AM', name: 'CROSSFIT', coachId: '1', coachName: 'Coach Mike', capacity: 20, bookedCount: 2 }
-];
+    static async getClasses(): Promise<GymClass[]> {
+        if (isOnline && db) {
+            const snap = await getDocs(collection(db, 'classes'));
+            return snap.docs.map(d => ({ id: d.id, ...d.data() } as GymClass));
+        }
+        // Mock Classes
+        return [
+            { id: '1', day: 'LUNES', time: '07:00 AM', name: 'CROSSFIT', coachId: '1', coachName: 'Coach Mike', capacity: 20, bookedCount: 5 },
+            { id: '2', day: 'LUNES', time: '06:00 PM', name: 'FUNCTIONAL', coachId: '2', coachName: 'Coach Sarah', capacity: 15, bookedCount: 15 },
+            { id: '3', day: 'MARTES', time: '07:00 AM', name: 'CROSSFIT', coachId: '1', coachName: 'Coach Mike', capacity: 20, bookedCount: 2 }
+        ];
     }
 
-    static async addClass(gymClass: Omit<GymClass, 'id'>): Promise < void> {
-    if(isOnline && db) {
-    await addDoc(collection(db, 'classes'), gymClass);
-}
+    static async addClass(gymClass: Omit<GymClass, 'id'>): Promise<void> {
+        if (isOnline && db) {
+            await addDoc(collection(db, 'classes'), gymClass);
+        }
     }
 
-    static async deleteClass(classId: string): Promise < void> {
-    if(isOnline && db) {
-    await deleteDoc(doc(db, 'classes', classId));
-}
+    static async deleteClass(classId: string): Promise<void> {
+        if (isOnline && db) {
+            await deleteDoc(doc(db, 'classes', classId));
+        }
     }
 
     // --- BOOKINGS ---
-    static async bookClass(classId: string, user: UserProfile): Promise < void> {
-    if(isOnline && db) {
-    const classRef = doc(db, 'classes', classId);
-    const attendeeRef = doc(db, 'classes', classId, 'attendees', user.uid);
+    static async bookClass(classId: string, user: UserProfile): Promise<void> {
+        if (isOnline && db) {
+            const classRef = doc(db, 'classes', classId);
+            const attendeeRef = doc(db, 'classes', classId, 'attendees', user.uid);
 
-    await runTransaction(db, async (transaction) => {
-        const classDoc = await transaction.get(classRef);
-        const attendeeDoc = await transaction.get(attendeeRef);
+            await runTransaction(db, async (transaction) => {
+                const classDoc = await transaction.get(classRef);
+                const attendeeDoc = await transaction.get(attendeeRef);
 
-        if (!classDoc.exists()) throw new Error("Clase no encontrada");
-        if (attendeeDoc.exists()) throw new Error("Ya estás inscrito en esta clase");
+                if (!classDoc.exists()) throw new Error("Clase no encontrada");
+                if (attendeeDoc.exists()) throw new Error("Ya estás inscrito en esta clase");
 
-        const classData = classDoc.data() as GymClass;
-        if (classData.bookedCount >= classData.capacity) throw new Error("Clase llena");
+                const classData = classDoc.data() as GymClass;
+                if (classData.bookedCount >= classData.capacity) throw new Error("Clase llena");
 
-        transaction.update(classRef, { bookedCount: increment(1) });
-        transaction.set(attendeeRef, {
-            uid: user.uid,
-            fullName: user.fullName,
-            email: user.email,
-            joinedAt: serverTimestamp()
-        });
-    });
-}
+                transaction.update(classRef, { bookedCount: increment(1) });
+                transaction.set(attendeeRef, {
+                    uid: user.uid,
+                    fullName: user.fullName,
+                    email: user.email,
+                    joinedAt: serverTimestamp()
+                });
+            });
+        }
     }
 
-    static async cancelBooking(classId: string, uid: string): Promise < void> {
-    if(isOnline && db) {
-    const classRef = doc(db, 'classes', classId);
-    const attendeeRef = doc(db, 'classes', classId, 'attendees', uid);
+    static async cancelBooking(classId: string, uid: string): Promise<void> {
+        if (isOnline && db) {
+            const classRef = doc(db, 'classes', classId);
+            const attendeeRef = doc(db, 'classes', classId, 'attendees', uid);
 
-    await runTransaction(db, async (transaction) => {
-        const attendeeDoc = await transaction.get(attendeeRef);
-        if (!attendeeDoc.exists()) return; // Already cancelled or never existed
+            await runTransaction(db, async (transaction) => {
+                const attendeeDoc = await transaction.get(attendeeRef);
+                if (!attendeeDoc.exists()) return; // Already cancelled or never existed
 
-        transaction.update(classRef, { bookedCount: increment(-1) });
-        transaction.delete(attendeeRef);
-    });
-}
+                transaction.update(classRef, { bookedCount: increment(-1) });
+                transaction.delete(attendeeRef);
+            });
+        }
     }
 
-    static async getClassAttendees(classId: string): Promise < any[] > {
-    if(isOnline && db) {
-    const snap = await getDocs(collection(db, 'classes', classId, 'attendees'));
-    return snap.docs.map(d => d.data());
-}
-return [];
+    static async getClassAttendees(classId: string): Promise<any[]> {
+        if (isOnline && db) {
+            const snap = await getDocs(collection(db, 'classes', classId, 'attendees'));
+            return snap.docs.map(d => d.data());
+        }
+        return [];
     }
 
-    static async getUserBookings(uid: string): Promise < string[] > {
-    // This is tricky without a separate collection or collection group query. 
-    // For MVP, we'll fetch classes and check distinct logic or just not show "My Classes" properly yet on the user side without querying all classes.
-    // Better: client side checks if user is in 'attendees' of the class? No, that's too many reads.
-    // Efficient way: store 'bookedClasses' array on user profile? Yes, simpler.
-    // Logic: When booking, also update user profile.
-    // Let's stick to the requested feature: "User sees classes and can book". We can check "isBooked" by trying to fetch the attendee doc or querying all classes user is in. 
-    // For now, let's keep it simple: Client checks availability. 'isBooked' state might need a helper if we want to show "You are booked" in the list.
+    static async getUserBookings(uid: string): Promise<string[]> {
+        // This is tricky without a separate collection or collection group query. 
+        // For MVP, we'll fetch classes and check distinct logic or just not show "My Classes" properly yet on the user side without querying all classes.
+        // Better: client side checks if user is in 'attendees' of the class? No, that's too many reads.
+        // Efficient way: store 'bookedClasses' array on user profile? Yes, simpler.
+        // Logic: When booking, also update user profile.
+        // Let's stick to the requested feature: "User sees classes and can book". We can check "isBooked" by trying to fetch the attendee doc or querying all classes user is in. 
+        // For now, let's keep it simple: Client checks availability. 'isBooked' state might need a helper if we want to show "You are booked" in the list.
 
-    // Let's implement a simpler "am I booked?" check that the client calls per class? No, too many calls.
-    // Let's do: collectionGroup query on 'attendees' where uid == user.uid.
-    if(isOnline && db) {
-    const q = query(collection(db, 'classes'), where('visible', '==', true)); // we can't easily query subcollections like this without Composite Index if we filter classes. 
-    // Actually, collectionGroup is best.
-    // const q = query(collectionGroup(db, 'attendees'), where('uid', '==', uid));
-    // But 'attendees' is a subcollection name.
-    // simpler: Just return empty for now, handle logic in components if needed or rely on 'bookClass' checking existence.
-}
-return [];
+        // Let's implement a simpler "am I booked?" check that the client calls per class? No, too many calls.
+        // Let's do: collectionGroup query on 'attendees' where uid == user.uid.
+        if (isOnline && db) {
+            const q = query(collection(db, 'classes'), where('visible', '==', true)); // we can't easily query subcollections like this without Composite Index if we filter classes. 
+            // Actually, collectionGroup is best.
+            // const q = query(collectionGroup(db, 'attendees'), where('uid', '==', uid));
+            // But 'attendees' is a subcollection name.
+            // simpler: Just return empty for now, handle logic in components if needed or rely on 'bookClass' checking existence.
+        }
+        return [];
     }
 
 
     // --- CONFIG ---
-    static async getGymConfig(): Promise < GymConfig > {
-    if(isOnline && db) {
-    const snap = await getDoc(doc(db, 'config', 'main'));
-    if (snap.exists()) return snap.data() as GymConfig;
-}
-// Mock Config
-return {
-    paymentMethods: {
-        zelle: 'Enviar a: pagosc mcf@gmail.com / Titular: CMCF Enterprise LLC',
-        pago_movil: '0414-1234567 / CI: 12345678 / Banco: Mercantil',
-        binance: 'Pay ID: 123456789 / Email: crypto@cmcf.com',
-        transferencia: 'Banco Mercantil / Cuenta: 0105...1234 / RIF: J-123456789'
-    },
-    contactPhone: '+58 414 123 4567',
-    contactEmail: 'info@cmcf.com'
-};
+    static async getGymConfig(): Promise<GymConfig> {
+        if (isOnline && db) {
+            const snap = await getDoc(doc(db, 'config', 'main'));
+            if (snap.exists()) return snap.data() as GymConfig;
+        }
+        // Mock Config
+        return {
+            paymentMethods: {
+                zelle: 'Enviar a: pagosc mcf@gmail.com / Titular: CMCF Enterprise LLC',
+                pago_movil: '0414-1234567 / CI: 12345678 / Banco: Mercantil',
+                binance: 'Pay ID: 123456789 / Email: crypto@cmcf.com',
+                transferencia: 'Banco Mercantil / Cuenta: 0105...1234 / RIF: J-123456789'
+            },
+            contactPhone: '+58 414 123 4567',
+            contactEmail: 'info@cmcf.com'
+        };
     }
 
-    static async updateGymConfig(data: Partial<GymConfig>): Promise < void> {
-    if(isOnline && db) {
-    await setDoc(doc(db, 'config', 'main'), data, { merge: true });
-}
+    static async updateGymConfig(data: Partial<GymConfig>): Promise<void> {
+        if (isOnline && db) {
+            await setDoc(doc(db, 'config', 'main'), data, { merge: true });
+        }
     }
 
     // --- HELPERS ---
     private static mockProfile(role: 'admin' | 'user', email: string): UserProfile {
-    return {
-        uid: 'mock-' + Date.now() + Math.random(),
-        email,
-        role,
-        fullName: role === 'admin' ? 'Sarah Connor' : 'John Connor',
-        cedula: 'V-12345678',
-        phone: '0414-1234567',
-        membershipStatus: 'active',
-        membershipExpiry: Date.now() + 86400000 * 15,
-        balance: 0,
-        joinedAt: Date.now()
-    };
-}
+        return {
+            uid: 'mock-' + Date.now() + Math.random(),
+            email,
+            role,
+            fullName: role === 'admin' ? 'Sarah Connor' : 'John Connor',
+            cedula: 'V-12345678',
+            phone: '0414-1234567',
+            membershipStatus: 'active',
+            membershipExpiry: Date.now() + 86400000 * 15,
+            balance: 0,
+            joinedAt: Date.now()
+        };
+    }
 }
 
 export { auth, db };

@@ -35,7 +35,12 @@ export default function LoginPage() {
             setIsLoading(true);
             const user = await GymService.login(data.email, data.password);
             login(user);
-            router.push('/dashboard');
+
+            if (user.role === 'admin') {
+                router.push('/admin');
+            } else {
+                router.push('/dashboard');
+            }
         } catch (err) {
             setError('Credenciales inválidas');
         } finally {

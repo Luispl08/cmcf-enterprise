@@ -26,7 +26,7 @@ import {
     Firestore,
     Timestamp
 } from 'firebase/firestore';
-import { UserProfile, Payment, GymClass, Plan, Staff } from '@/types';
+import { UserProfile, Payment, GymClass, Plan, Staff, GymConfig } from '@/types';
 
 // 1. CONFIGURATION
 const firebaseConfig = {
@@ -229,6 +229,31 @@ export class GymService {
     static async deleteClass(classId: string): Promise<void> {
         if (isOnline && db) {
             await deleteDoc(doc(db, 'classes', classId));
+        }
+    }
+
+    // --- CONFIG ---
+    static async getGymConfig(): Promise<GymConfig> {
+        if (isOnline && db) {
+            const snap = await getDoc(doc(db, 'config', 'main'));
+            if (snap.exists()) return snap.data() as GymConfig;
+        }
+        // Mock Config
+        return {
+            paymentMethods: {
+                zelle: 'Enviar a: pagosc mcf@gmail.com / Titular: CMCF Enterprise LLC',
+                pago_movil: '0414-1234567 / CI: 12345678 / Banco: Mercantil',
+                binance: 'Pay ID: 123456789 / Email: crypto@cmcf.com',
+                transferencia: 'Banco Mercantil / Cuenta: 0105...1234 / RIF: J-123456789'
+            },
+            contactPhone: '+58 414 123 4567',
+            contactEmail: 'info@cmcf.com'
+        };
+    }
+
+    static async updateGymConfig(data: Partial<GymConfig>): Promise<void> {
+        if (isOnline && db) {
+            await setDoc(doc(db, 'config', 'main'), data, { merge: true });
         }
     }
 

@@ -32,10 +32,22 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
     const [method, setMethod] = useState<PaymentMethod | null>(null);
     const [reference, setReference] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [config, setConfig] = useState<any>(null); // GymConfig
+
+    useEffect(() => {
+        GymService.getGymConfig().then(setConfig);
+    }, []);
 
     const handleMethodSelect = (m: PaymentMethod) => {
         setMethod(m);
         setStep('details');
+    };
+
+    const getInstructions = (id: string) => {
+        if (config && config.paymentMethods && config.paymentMethods[id]) {
+            return config.paymentMethods[id];
+        }
+        return PAYMENT_METHODS.find(m => m.id === id)?.instructions;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -174,7 +186,7 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                         <div className="bg-brand-green/5 border border-brand-green/20 p-4 rounded mb-6">
                             <p className="text-xs text-brand-green font-bold uppercase mb-1">INSTRUCCIONES DE PAGO:</p>
                             <p className="text-sm text-gray-300 font-mono">
-                                {PAYMENT_METHODS.find(m => m.id === method)?.instructions}
+                                {getInstructions(method)}
                             </p>
                         </div>
 

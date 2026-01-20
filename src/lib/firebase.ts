@@ -29,6 +29,7 @@ import {
     collectionGroup
 } from 'firebase/firestore';
 import { UserProfile, Payment, GymClass, Plan, Staff, GymConfig } from '@/types';
+import { addMonths } from 'date-fns';
 
 // 1. CONFIGURATION
 const firebaseConfig = {
@@ -207,9 +208,9 @@ export class GymService {
                 const currentExpiry = userData.membershipExpiry || 0;
                 const now = Date.now();
 
-                // If active and future, add 30 days to existing expiry. If expired, add 30 days to NOW.
+                // If active and future, add 1 month to existing expiry. If expired, add 1 month to NOW.
                 const baseDate = currentExpiry > now ? currentExpiry : now;
-                const newExpiry = baseDate + (30 * 24 * 60 * 60 * 1000);
+                const newExpiry = addMonths(baseDate, 1).getTime();
 
                 await updateDoc(userRef, {
                     membershipStatus: 'active',

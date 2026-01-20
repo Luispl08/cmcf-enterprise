@@ -6,6 +6,13 @@ import Link from 'next/link';
 export default async function PlansPage() {
     const plans = await GymService.getPlans();
 
+    // Sort plans: Recommended first
+    plans.sort((a, b) => {
+        if (a.recommended && !b.recommended) return -1;
+        if (!a.recommended && b.recommended) return 1;
+        return 0;
+    });
+
     return (
         <div className="min-h-screen bg-black pt-20 pb-20">
             <div className="max-w-7xl mx-auto px-4">

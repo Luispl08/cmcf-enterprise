@@ -110,8 +110,43 @@ export class GymService {
             return snap.docs.map(d => ({ id: d.id, ...d.data() } as Plan));
         }
         return [
-            { id: 'p1', title: 'PLAN BÁSICO', price: 30, currency: '$', description: 'Acceso a Pesas', visible: true, features: ['Pesas', 'Cardio'] },
-            { id: 'p2', title: 'PLAN ELITE', price: 50, currency: '$', description: 'Acceso Total + Crossfit', visible: true, recommended: true, features: ['Todo', 'Clases'] }
+            {
+                id: 'lite',
+                title: 'LITE: SESIÓN DIARIA',
+                price: 5,
+                currency: '$',
+                description: 'Acceso por un día',
+                visible: true,
+                features: ['Acceso a Pesas', 'Válido por 24h']
+            },
+            {
+                id: 'standard',
+                title: 'STANDARD',
+                price: 20,
+                currency: '$',
+                description: 'Lunes a Viernes',
+                visible: true,
+                features: ['Acceso a Pesas', 'Área de Cardio', 'Lunes a Viernes']
+            },
+            {
+                id: 'elite',
+                title: 'ELITE',
+                price: 30,
+                currency: '$',
+                description: 'Acceso Total 24/7',
+                visible: true,
+                recommended: true,
+                features: ['Lunes a Domingo', 'Acceso a Clases', 'Sin Restricciones']
+            },
+            {
+                id: 'full',
+                title: 'FULL PACK',
+                price: 50,
+                currency: '$',
+                description: 'VIP + Entrenador',
+                visible: true,
+                features: ['Lunes a Domingo', 'Entrenador Personal', 'Nutrición Básica', 'Toalla y Agua']
+            }
         ];
     }
 

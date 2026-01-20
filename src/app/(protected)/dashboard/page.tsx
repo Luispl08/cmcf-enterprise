@@ -98,11 +98,15 @@ export default function DashboardPage() {
                 </div>
 
                 {/* CTA Buttons based on status */}
-                {(!isMembershipActive && !isPending) && (
+                {(!isMembershipActive && !isPending) ? (
                     <Button variant="primary" size="lg" onClick={() => router.push('/#plans')}>
                         ACTIVAR MEMBRESÍA
                     </Button>
-                )}
+                ) : isMembershipActive ? (
+                    <Button variant="outline" className="border-brand-green/50 text-brand-green hover:bg-brand-green/10" onClick={() => router.push('/#plans')}>
+                        ADELANTAR PAGO
+                    </Button>
+                ) : null}
                 {isExpiringSoon && (
                     <Button variant="outline" className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10" onClick={() => router.push('/#plans')}>
                         RENOVAR AHORA (VENCE PRONTO)

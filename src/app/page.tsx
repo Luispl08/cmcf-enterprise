@@ -49,29 +49,17 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Plans */}
-      <section className="max-w-7xl mx-auto px-4 py-20">
-        <h2 className="text-4xl md:text-6xl font-display font-bold italic text-white mb-12 uppercase text-center">PLANES <span className="text-brand-green">.</span></h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {plans.map(p => (
-            <Card key={p.id} className="flex flex-col hover:border-brand-green group h-full" noPadding>
-              <div className="p-8 flex flex-col h-full relative">
-                {p.recommended && <div className="absolute top-0 right-0 bg-brand-green text-black text-xs font-bold px-3 py-1 tracking-widest font-display">RECOMENDADO</div>}
-
-                <h3 className="text-3xl font-display font-bold italic text-white mb-2">{p.title}</h3>
-                <div className="text-5xl font-display font-bold text-brand-green mb-6">{p.currency}{p.price}</div>
-
-                <div className="text-gray-400 text-sm mb-8 flex-grow">
-                  {p.description}
-                </div>
-
-                <Link href={`/join?plan=${p.id}`} className="w-full mt-auto">
-                  <Button variant="outline" className="w-full group-hover:bg-brand-green group-hover:text-black hover:border-brand-green transition-all">SELECCIONAR</Button>
-                </Link>
-              </div>
-            </Card>
-          ))}
-        </div>
+      {/* Plans Teaser */}
+      <section className="max-w-7xl mx-auto px-4 py-20 text-center" id="plans">
+        <h2 className="text-4xl md:text-6xl font-display font-bold italic text-white mb-8 uppercase">PLANES <span className="text-brand-green">.</span></h2>
+        <p className="text-gray-400 max-w-2xl mx-auto mb-12">
+          Diseñados para cada nivel de compromiso. Elige tu camino hacia la grandeza.
+        </p>
+        <Link href="/planes">
+          <Button variant="outline" className="text-xl px-12 py-6 h-auto border-brand-green text-brand-green hover:bg-brand-green hover:text-black">
+            VER TODOS LOS PLANES
+          </Button>
+        </Link>
       </section>
 
       {/* Testimonials */}

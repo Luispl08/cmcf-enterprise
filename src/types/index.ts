@@ -15,6 +15,8 @@ export interface UserProfile {
   balance: number;
   joinedAt: number;
   photoUrl?: string;
+  totalVisits?: number;
+  lastVisit?: number;
 }
 
 export interface Payment {

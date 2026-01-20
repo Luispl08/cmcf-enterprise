@@ -183,15 +183,19 @@ export default function DashboardPage() {
                     )}
                 </Card>
 
-                <Card title="Estadísticas">
-                    <div className="flex justify-between items-center mb-2">
-                        <span>Asistencias mes:</span>
-                        <span className="text-white font-bold">0</span>
+                <Card title="ESTADÍSTICAS">
+                    <div className="flex flex-col items-center justify-center p-4">
+                        <CheckCircle className="w-12 h-12 text-brand-green mb-2 opacity-80" />
+                        <h3 className="text-4xl font-display font-bold text-white mb-1">{user.totalVisits || 0}</h3>
+                        <p className="text-xs text-gray-500 uppercase tracking-widest">Entrenamientos Completados</p>
                     </div>
-                    <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden">
-                        <div className="bg-brand-green h-full w-[0%]"></div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-4 text-center italic">Comienza a entrenar para ver tus stats.</p>
+                    {user.lastVisit && (
+                        <div className="mt-4 pt-4 border-t border-gray-800 text-center">
+                            <p className="text-xs text-gray-400">
+                                Última visita: <span className="text-white">{new Date(user.lastVisit).toLocaleDateString()}</span>
+                            </p>
+                        </div>
+                    )}
                 </Card>
             </div>
         </div>

@@ -105,6 +105,44 @@ export class GymService {
         return this.mockProfile('user', 'unknown');
     }
 
+    static async searchUsers(queryText: string): Promise<UserProfile[]> {
+        if (!queryText.trim()) return [];
+        if (isOnline && db) {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef);
+            const querySnapshot = await getDocs(q);
+            const allUsers = querySnapshot.docs.map(d => d.data() as UserProfile);
+
+            const lowerQuery = queryText.toLowerCase();
+            return allUsers.filter(u =>
+                u.fullName?.toLowerCase().includes(lowerQuery) ||
+                u.email?.toLowerCase().includes(lowerQuery) ||
+                (u.cedula && u.cedula.includes(queryText))
+            );
+        }
+        return [];
+    }
+
+    static async checkInUser(uid: string): Promise<void> {
+        if (isOnline && db) {
+            const userRef = doc(db, 'users', uid);
+            await updateDoc(userRef, {
+                lastVisit: Date.now(),
+                totalVisits: increment(1)
+            });
+        }
+    }
+
+    static async getDashboardStats(): Promise<{ activeUsers: number }> {
+        if (isOnline && db) {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('membershipStatus', '==', 'active'));
+            const snap = await getDocs(q);
+            return { activeUsers: snap.size };
+        }
+        return { activeUsers: 0 };
+    }
+
     // --- DATA ---
     static async getPlans(): Promise<Plan[]> {
         if (isOnline && db) {

@@ -3,12 +3,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
-import { LayoutDashboard, Users, CreditCard, Dumbbell, Settings, LogOut, DollarSign, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Dumbbell, Settings, LogOut, DollarSign, Menu, X, ClipboardList } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
 const NAV_ITEMS = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Usuarios', href: '/admin/users', icon: Users },
+    { name: 'Check-In', href: '/admin/checkin', icon: ClipboardList },
     { name: 'Pagos', href: '/admin/payments', icon: CreditCard },
     { name: 'Precios', href: '/admin/plans', icon: DollarSign },
     { name: 'Clases', href: '/admin/classes', icon: Dumbbell },

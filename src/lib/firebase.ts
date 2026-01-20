@@ -226,6 +226,20 @@ export class GymService {
         }
     }
 
+    static async addPlan(plan: Omit<Plan, 'id'>): Promise<string> {
+        if (isOnline && db) {
+            const docRef = await addDoc(collection(db, 'plans'), plan);
+            return docRef.id;
+        }
+        return '';
+    }
+
+    static async deletePlan(planId: string): Promise<void> {
+        if (isOnline && db) {
+            await deleteDoc(doc(db, 'plans', planId));
+        }
+    }
+
     static async getUsers(): Promise<UserProfile[]> {
         if (isOnline && db) {
             const snap = await getDocs(collection(db, 'users'));

@@ -5,21 +5,86 @@ import Card from '@/components/ui/Card';
 import { useRouter } from 'next/navigation';
 import { Calendar, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
+import { useEffect, useState } from 'react';
+import { GymService } from '@/lib/firebase';
+import { GymClass } from '@/types';
+
+// Helper to map days to numbers (Sunday=0, Monday=1...) - matching typical getDay()
+// BUT our GymClass might use 'LUNES', 'MARTES' etc.
+const DAY_MAP: { [key: string]: number } = {
+    'DOMINGO': 0, 'LUNES': 1, 'MARTES': 2, 'MIÉRCOLES': 3, 'JUEVES': 4, 'VIERNES': 5, 'SÁBADO': 6
+};
 
 export default function DashboardPage() {
     const { user } = useAppStore();
     const router = useRouter();
-
-    if (!user) return null;
+    const [nextClass, setNextClass] = useState<GymClass | null>(null);
+    const [loadingClass, setLoadingClass] = useState(true);
 
     // Membership Logic
-    // Membership is active if status is active AND expiry date is in the future
+    if (!user) return null;
     const isMembershipActive = user.membershipStatus === 'active' && user.membershipExpiry && user.membershipExpiry > Date.now();
     const isPending = user.membershipStatus === 'pending';
     const hasExpired = user.membershipStatus === 'active' && user.membershipExpiry && user.membershipExpiry <= Date.now();
-
     const daysRemaining = user.membershipExpiry ? differenceInDays(new Date(user.membershipExpiry), new Date()) : 0;
     const isExpiringSoon = isMembershipActive && daysRemaining <= 3 && daysRemaining >= 0;
+
+    useEffect(() => {
+        const fetchNextClass = async () => {
+            if (!user) return;
+            setLoadingClass(true);
+            try {
+                const [allClasses, bookedIds] = await Promise.all([
+                    GymService.getClasses(),
+                    GymService.getUserBookings(user.uid)
+                ]);
+
+                const userClasses = allClasses.filter(c => bookedIds.includes(c.id));
+
+                // Find the next class
+                // We need to convert "LUNES 07:00 AM" to a Date object relative to now
+                const now = new Date();
+                const currentDay = now.getDay();
+
+                const upcomingClasses = userClasses.map(c => {
+                    const targetDay = DAY_MAP[c.day.toUpperCase()];
+                    if (targetDay === undefined) return null;
+
+                    let diff = targetDay - currentDay;
+                    if (diff < 0) diff += 7; // It's next week
+
+                    const classDate = new Date(now);
+                    classDate.setDate(now.getDate() + diff);
+
+                    // Parse Time (e.g., "07:00 AM")
+                    const [timePart, period] = c.time.split(' ');
+                    let [hours, minutes] = timePart.split(':').map(Number);
+                    if (period === 'PM' && hours !== 12) hours += 12;
+                    if (period === 'AM' && hours === 12) hours = 0;
+
+                    classDate.setHours(hours, minutes, 0, 0);
+
+                    // If it's today but time has passed, move to next week
+                    if (diff === 0 && classDate < now) {
+                        classDate.setDate(classDate.getDate() + 7);
+                    }
+                    return { ...c, date: classDate };
+                }).filter(c => c !== null) as (GymClass & { date: Date })[];
+
+                upcomingClasses.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+                setNextClass(upcomingClasses[0] || null);
+
+            } catch (error) {
+                console.error("Error fetching next class", error);
+            } finally {
+                setLoadingClass(false);
+            }
+        };
+
+        fetchNextClass();
+    }, [user]);
+
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
@@ -86,12 +151,32 @@ export default function DashboardPage() {
                     </div>
                 </Card>
 
-                <Card title="Próxima Clase">
-                    <div className="flex flex-col items-center justify-center h-32 text-gray-500 italic">
-                        <Calendar className="w-8 h-8 mb-2 opacity-50" />
-                        <p>No tienes clases reservadas</p>
-                    </div>
-                    <Button variant="outline" className="w-full text-xs mt-auto" onClick={() => router.push('/classes')}>VER HORARIOS</Button>
+                <Card title="Próxima Clase" className="relative overflow-hidden">
+                    {loadingClass ? (
+                        <div className="flex flex-col items-center justify-center h-32 animate-pulse text-gray-500">
+                            Cargando...
+                        </div>
+                    ) : nextClass ? (
+                        <div className="flex flex-col h-full">
+                            <div className="flex-1 flex flex-col justify-center items-center text-center py-4">
+                                <span className="text-3xl font-display font-bold text-white italic mb-2">{nextClass.name}</span>
+                                <div className="flex items-center gap-2 text-brand-green text-lg font-bold bg-brand-green/10 px-3 py-1 rounded-full">
+                                    <Clock size={16} />
+                                    {nextClass.day} {nextClass.time}
+                                </div>
+                                <p className="text-sm text-gray-400 mt-2">{nextClass.coachName}</p>
+                            </div>
+                            <Button variant="outline" className="w-full text-xs mt-auto border-brand-green/30 text-brand-green hover:bg-brand-green/10" onClick={() => router.push('/classes')}>
+                                VER MÁS CLASES
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-32 text-gray-500 italic">
+                            <Calendar className="w-8 h-8 mb-2 opacity-50" />
+                            <p>No tienes clases reservadas</p>
+                            <Button variant="outline" className="w-full text-xs mt-auto" onClick={() => router.push('/classes')}>VER HORARIOS</Button>
+                        </div>
+                    )}
                 </Card>
 
                 <Card title="Estadísticas">

@@ -22,26 +22,27 @@ export default function AdminPaymentsPage() {
     }, []);
 
     const handleAction = async (payment: Payment, action: 'approve' | 'reject') => {
-        if (!confirm(`¿Estás seguro de ${action === 'approve' ? 'APROBAR' : 'RECHAZAR'} este pago?`)) return;
-
-        try {
-            const newStatus = action === 'approve' ? 'approved' : 'rejected';
-            const feedback = action === 'reject' ? prompt('Motivo del rechazo:') || 'Datos inválidos' : undefined;
-
-            await GymService.updatePaymentStatus(payment.id, newStatus, feedback);
-
-            if (action === 'approve') {
-                // Activate User Membership (30 days)
-                await GymService.updateUser(payment.userId, {
-                    membershipStatus: 'active',
-                    membershipExpiry: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 days
-                });
+        if (action === 'approve') {
+            if (!confirm(`¿Aprobar pago de ${payment.currency}${payment.amount}?`)) return;
+            try {
+                await GymService.approvePayment(payment.id, payment.userId);
+                alert('Pago aprobado y membresía actualizada.');
+                loadPayments();
+            } catch (error) {
+                alert('Error al aprobar pago.');
             }
+        } else {
+            // Reject Flow
+            const feedback = prompt('Por favor ingresa el motivo del rechazo:', 'Comprobante ilegible / Monto incorrecto');
+            if (feedback === null) return; // Cancelled
 
-            // Refresh list
-            loadPayments();
-        } catch (error) {
-            alert('Error al procesar');
+            try {
+                await GymService.updatePaymentStatus(payment.id, 'rejected', feedback);
+                alert('Pago rechazado.');
+                loadPayments();
+            } catch (error) {
+                alert('Error al rechazar pago.');
+            }
         }
     };
 

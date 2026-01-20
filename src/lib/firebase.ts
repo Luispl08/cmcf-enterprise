@@ -191,6 +191,38 @@ export class GymService {
         }
     }
 
+    static async approvePayment(paymentId: string, userId: string): Promise<void> {
+        if (isOnline && db) {
+            // 1. Update Payment Status
+            await this.updatePaymentStatus(paymentId, 'approved');
+
+            // 2. Calculate New Expiry
+            const userRef = doc(db, 'users', userId);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                const userData = userSnap.data() as UserProfile;
+                const currentExpiry = userData.membershipExpiry || 0;
+                const now = Date.now();
+
+                // If active and future, add 30 days to existing expiry. If expired, add 30 days to NOW.
+                const baseDate = currentExpiry > now ? currentExpiry : now;
+                const newExpiry = baseDate + (30 * 24 * 60 * 60 * 1000);
+
+                await updateDoc(userRef, {
+                    membershipStatus: 'active',
+                    membershipExpiry: newExpiry
+                });
+            }
+        }
+    }
+
+    static async updatePlan(planId: string, data: Partial<Plan>): Promise<void> {
+        if (isOnline && db) {
+            await updateDoc(doc(db, 'plans', planId), data);
+        }
+    }
+
     static async getUsers(): Promise<UserProfile[]> {
         if (isOnline && db) {
             const snap = await getDocs(collection(db, 'users'));

@@ -2,13 +2,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
-import { LayoutDashboard, Users, CreditCard, Dumbbell, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Dumbbell, Settings, LogOut, DollarSign } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
 const NAV_ITEMS = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Usuarios', href: '/admin/users', icon: Users },
     { name: 'Pagos', href: '/admin/payments', icon: CreditCard },
+    { name: 'Precios', href: '/admin/plans', icon: DollarSign },
     { name: 'Clases', href: '/admin/classes', icon: Dumbbell },
     { name: 'Admin', href: '/admin/settings', icon: Settings },
 ];

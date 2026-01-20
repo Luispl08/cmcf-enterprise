@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Dumbbell, Instagram, Facebook, Twitter } from 'lucide-react';
+import { Dumbbell, Instagram } from 'lucide-react';
 
 export default function Footer() {
     return (
@@ -35,14 +35,8 @@ export default function Footer() {
                 <div>
                     <h3 className="font-display text-lg italic text-brand-green mb-4">Síguenos</h3>
                     <div className="flex space-x-4">
-                        <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-green hover:text-black transition-colors">
+                        <a href="https://www.instagram.com/cmcfitnesscenter?igsh=Mm5maHNvM3ZsYW84" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 rounded-full hover:bg-brand-green hover:text-black transition-colors">
                             <Instagram size={20} />
-                        </a>
-                        <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-green hover:text-black transition-colors">
-                            <Facebook size={20} />
-                        </a>
-                        <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-green hover:text-black transition-colors">
-                            <Twitter size={20} />
                         </a>
                     </div>
                     <div className="mt-4 text-sm text-gray-500">

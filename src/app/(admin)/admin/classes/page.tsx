@@ -3,25 +3,27 @@ import { useEffect, useState } from 'react';
 import { GymService } from '@/lib/firebase';
 import { GymClass } from '@/types';
 import { Button } from '@/components/ui/Button';
-import { Trash2, Plus, Clock, Users, User } from 'lucide-react';
+import { Trash2, Plus, Clock, Users, User, X } from 'lucide-react';
 import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
 
 const DAYS = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'];
+
+// ... (previous imports)
 
 export default function AdminClassesPage() {
     const [classes, setClasses] = useState<GymClass[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
 
-    // New Class Form State
+    // View Attendees State
+    const [viewingClass, setViewingClass] = useState<GymClass | null>(null);
+    const [attendees, setAttendees] = useState<any[]>([]);
+    const [loadingAttendees, setLoadingAttendees] = useState(false);
+
+    // New Class Form State (as before) ...
     const [newClass, setNewClass] = useState<Partial<GymClass>>({
-        day: 'LUNES',
-        time: '',
-        name: '',
-        coachName: '',
-        capacity: 20,
-        bookedCount: 0
+        day: 'LUNES', time: '', name: '', coachName: '', capacity: 20, bookedCount: 0
     });
 
     const loadClasses = async () => {
@@ -31,19 +33,33 @@ export default function AdminClassesPage() {
         setLoading(false);
     };
 
-    useEffect(() => {
-        loadClasses();
-    }, []);
+    useEffect(() => { loadClasses(); }, []);
+
+    const handleViewAttendees = async (gymClass: GymClass) => {
+        setViewingClass(gymClass);
+        setLoadingAttendees(true);
+        try {
+            const data = await GymService.getClassAttendees(gymClass.id);
+            setAttendees(data);
+        } catch (e) {
+            console.error(e);
+            alert('Error al cargar asistentes');
+        } finally {
+            setLoadingAttendees(false);
+        }
+    };
+
+    // ... handleAddClass and handleDelete ...
 
     const handleAddClass = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             await GymService.addClass({
                 ...newClass as GymClass,
-                coachId: 'mock-coach', // simplified for now
+                coachId: 'mock-coach',
             });
             setIsAdding(false);
-            setNewClass({ day: 'LUNES', time: '', name: '', coachName: '', capacity: 20, bookedCount: 0 }); // reset
+            setNewClass({ day: 'LUNES', time: '', name: '', coachName: '', capacity: 20, bookedCount: 0 });
             loadClasses();
         } catch (error) {
             alert('Error al crear clase');
@@ -56,6 +72,7 @@ export default function AdminClassesPage() {
         loadClasses();
     };
 
+
     return (
         <div className="p-8">
             <div className="flex justify-between items-center mb-8">
@@ -67,7 +84,9 @@ export default function AdminClassesPage() {
                 </Button>
             </div>
 
+            {/* MODAL: NEW CLASS */}
             {isAdding && (
+                // ... existing new class modal logic ...
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
                     <Card className="max-w-md w-full relative">
                         <h2 className="text-xl font-bold text-white mb-4">Nueva Clase Recurrente</h2>
@@ -98,6 +117,43 @@ export default function AdminClassesPage() {
                 </div>
             )}
 
+            {/* MODAL: VIEW ATTENDEES */}
+            {viewingClass && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                    <Card className="max-w-md w-full relative max-h-[80vh] flex flex-col">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Asistentes</h2>
+                                <p className="text-brand-green">{viewingClass.name} - {viewingClass.day} {viewingClass.time}</p>
+                            </div>
+                            <button onClick={() => setViewingClass(null)} className="text-gray-500 hover:text-white"><X size={24} /></button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                            {loadingAttendees ? (
+                                <p className="text-gray-500 text-center py-4">Cargando...</p>
+                            ) : attendees.length === 0 ? (
+                                <p className="text-gray-500 text-center py-4">No hay inscritos aún.</p>
+                            ) : (
+                                attendees.map((a, i) => (
+                                    <div key={i} className="flex justify-between items-center bg-neutral-900 p-3 rounded border border-gray-800">
+                                        <div>
+                                            <p className="text-white font-bold">{a.fullName || 'Usuario'}</p>
+                                            <p className="text-xs text-gray-500">{a.email}</p>
+                                        </div>
+                                        <div className="bg-brand-green/10 text-brand-green text-xs px-2 py-1 rounded">INSCRITO</div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-gray-800">
+                            <Button className="w-full" variant="outline" onClick={() => setViewingClass(null)}>CERRAR</Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
             <div className="space-y-8">
                 {DAYS.map(day => {
                     const dayClasses = classes.filter(c => c.day === day).sort((a, b) => a.time.localeCompare(b.time));
@@ -111,11 +167,13 @@ export default function AdminClassesPage() {
                                     <div key={c.id} className="bg-neutral-900 border border-gray-800 p-4 rounded hover:border-brand-green/30 transition-colors relative group">
                                         <button
                                             onClick={() => handleDelete(c.id)}
-                                            className="absolute top-2 right-2 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="absolute top-2 right-2 text-gray-600 hover:text-red-500 transition-colors z-10"
+                                            title="Eliminar clase"
                                         >
                                             <Trash2 size={16} />
                                         </button>
-                                        <div className="flex justify-between items-start mb-2">
+
+                                        <div className="flex justify-between items-start mb-2 pr-6">
                                             <h4 className="font-bold text-white text-lg">{c.name}</h4>
                                             <span className="flex items-center text-brand-green font-mono text-sm bg-brand-green/10 px-2 py-1 rounded">
                                                 <Clock size={12} className="mr-1" /> {c.time}
@@ -125,14 +183,18 @@ export default function AdminClassesPage() {
                                             <User size={14} className="mr-2" /> {c.coachName}
                                         </div>
                                         <div className="flex items-center text-gray-400 text-sm">
-                                            <Users size={14} className="mr-2" /> {c.bookedCount} / {c.capacity} Cupos
+                                            <Users size={14} className="mr-2" /> {c.bookedCount} / {c.capacity} Inscritos
                                         </div>
-                                        {/* Progress Bar for Capacity */}
-                                        <div className="mt-3 h-1 bg-gray-800 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-brand-green"
-                                                style={{ width: `${(c.bookedCount / c.capacity) * 100}%` }}
-                                            />
+
+                                        <div className="mt-4 pt-4 border-t border-gray-800">
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                className="w-full text-xs"
+                                                onClick={() => handleViewAttendees(c)}
+                                            >
+                                                VER ASISTENTES
+                                            </Button>
                                         </div>
                                     </div>
                                 ))}

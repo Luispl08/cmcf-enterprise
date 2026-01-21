@@ -39,7 +39,15 @@ export default function AdminPlansPage() {
     };
 
     const handleCreate = () => {
-        setEditingPlan({ features: [], currency: '$', visible: true, recommended: false });
+        setEditingPlan({
+            features: [],
+            currency: '$',
+            visible: true,
+            recommended: false,
+            durationDays: 30,
+            durationType: 'months',
+            durationValue: 1
+        });
         setIsModalOpen(true);
     };
 
@@ -181,12 +189,42 @@ export default function AdminPlansPage() {
                                         onChange={e => setEditingPlan({ ...editingPlan, price: Number(e.target.value) })}
                                         required
                                     />
-                                    <Input
-                                        label="Moneda ($/Bs)"
-                                        value={editingPlan.currency || '$'}
-                                        onChange={e => setEditingPlan({ ...editingPlan, currency: e.target.value })}
+                                    <div>
+                                        <label className="block text-brand-green font-bold text-sm uppercase mb-2">Moneda</label>
+                                        <select
+                                            className="w-full bg-neutral-950 border border-gray-800 rounded p-2 text-white text-sm focus:border-brand-green outline-none"
+                                            value={editingPlan.currency || '$'}
+                                            onChange={e => setEditingPlan({ ...editingPlan, currency: e.target.value })}
+                                            required
+                                        >
+                                            <option value="$">$ (USD)</option>
+                                            <option value="€">€ (EUR)</option>
+                                            <option value="Bs">Bs (Bolívares)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-brand-green font-bold text-sm uppercase mb-2">Duración</label>
+                                    <select
+                                        className="w-full bg-neutral-950 border border-gray-800 rounded p-2 text-white text-sm focus:border-brand-green outline-none"
+                                        value={`${editingPlan.durationType || 'months'}-${editingPlan.durationValue || 1}`}
+                                        onChange={e => {
+                                            const [type, value] = e.target.value.split('-');
+                                            setEditingPlan({
+                                                ...editingPlan,
+                                                durationType: type as 'days' | 'months',
+                                                durationValue: Number(value),
+                                                durationDays: type === 'days' ? Number(value) : Number(value) * 30
+                                            });
+                                        }}
                                         required
-                                    />
+                                    >
+                                        <option value="days-1">Diario (1 día)</option>
+                                        <option value="days-14">2 Semanas (14 días)</option>
+                                        <option value="months-1">Mensual (1 mes)</option>
+                                        <option value="months-3">Trimestral (3 meses)</option>
+                                    </select>
                                 </div>
 
                                 <div>

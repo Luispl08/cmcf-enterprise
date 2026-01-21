@@ -34,8 +34,8 @@ export default function UserClassesPage() {
     };
 
     useEffect(() => {
-        loadClasses();
-    }, [user]);
+        if (user?.uid) loadClasses();
+    }, [user?.uid]);
 
     const handleBook = async (gymClass: GymClass) => {
         if (!user) return;
@@ -84,7 +84,7 @@ export default function UserClassesPage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {dayClasses.map(c => {
-                                        const isFull = c.bookedCount >= c.capacity;
+                                        const isFull = !c.isUnlimited && c.bookedCount >= c.capacity;
                                         const isBooked = bookedClassIds.includes(c.id);
 
                                         return (
@@ -106,15 +106,17 @@ export default function UserClassesPage() {
                                                     <div className="flex items-center justify-between text-sm text-gray-400">
                                                         <span className="flex items-center gap-2"><Users size={14} /> Cupos</span>
                                                         <span className={isFull ? 'text-red-500 font-bold' : 'text-white'}>
-                                                            {c.bookedCount} / {c.capacity}
+                                                            {c.isUnlimited ? <span className="text-brand-green font-bold">ILIMITADO</span> : `${c.bookedCount} / ${c.capacity}`}
                                                         </span>
                                                     </div>
-                                                    <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-                                                        <div
-                                                            className={`h-full transition-all duration-500 ${isFull ? 'bg-red-500' : 'bg-brand-green'}`}
-                                                            style={{ width: `${(c.bookedCount / c.capacity) * 100}%` }}
-                                                        />
-                                                    </div>
+                                                    {!c.isUnlimited && (
+                                                        <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                                                            <div
+                                                                className={`h-full transition-all duration-500 ${isFull ? 'bg-red-500' : 'bg-brand-green'}`}
+                                                                style={{ width: `${(c.bookedCount / c.capacity) * 100}%` }}
+                                                            />
+                                                        </div>
+                                                    )}
 
                                                     <Button
                                                         onClick={() => handleBook(c)}

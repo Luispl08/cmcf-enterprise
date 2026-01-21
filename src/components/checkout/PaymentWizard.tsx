@@ -7,14 +7,14 @@ import { Plan } from '@/types';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
-import { Check, CreditCard, Lock, Smartphone, Banknote, Landmark, QrCode } from 'lucide-react';
+import { Check, CreditCard, Lock, Smartphone, Banknote, Landmark, QrCode, Split } from 'lucide-react';
 
 interface PaymentWizardProps {
     selectedPlan: Plan;
 }
 
 type Step = 'summary' | 'method' | 'details' | 'success';
-type PaymentMethod = 'credit_card' | 'zelle' | 'pago_movil' | 'binance' | 'transferencia' | 'efectivo';
+type PaymentMethod = 'credit_card' | 'zelle' | 'pago_movil' | 'binance' | 'transferencia' | 'efectivo' | 'split';
 
 const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: any; instructions: string }[] = [
     { id: 'zelle', label: 'Zelle', icon: Smartphone, instructions: 'Enviar a: pagosc mcf@gmail.com / Titular: CMCF Enterprise LLC' },
@@ -22,7 +22,7 @@ const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: any; instructio
     { id: 'binance', label: 'Binance Pay', icon: QrCode, instructions: 'Pay ID: 123456789 / Email: crypto@cmcf.com' },
     { id: 'transferencia', label: 'Transferencia', icon: Landmark, instructions: 'Banco Mercantil / Cuenta: 0105...1234 / RIF: J-123456789' },
     { id: 'efectivo', label: 'Efectivo', icon: Banknote, instructions: 'Pagar directamente en recepción. Traer comprobante.' },
-    { id: 'credit_card', label: 'Tarjeta (Stripe)', icon: CreditCard, instructions: 'Procesamiento seguro vía Stripe' },
+    { id: 'split', label: 'Pago Dividido / Múltiple', icon: Split, instructions: 'Selecciona dos métodos de pago y el monto para cada uno.' },
 ];
 
 export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
@@ -33,14 +33,52 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
     const [reference, setReference] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [config, setConfig] = useState<any>(null); // GymConfig
+    const [rates, setRates] = useState<{ dolar: number, euro: number, fecha: string } | null>(null);
+
+    // Advanced Payment State
+    const [isPartial, setIsPartial] = useState(false);
+    const [payAmount, setPayAmount] = useState(selectedPlan.price);
+
+    // Split State
+    const [splitSelection, setSplitSelection] = useState<{
+        method1: PaymentMethod | '',
+        amount1: number,
+        ref1: string,
+        method2: PaymentMethod | '',
+        amount2: number,
+        ref2: string
+    }>({ method1: '', amount1: 0, ref1: '', method2: '', amount2: 0, ref2: '' });
 
     useEffect(() => {
         GymService.getGymConfig().then(setConfig);
-    }, []);
+        GymService.getExchangeRates().then(setRates);
+        setPayAmount(selectedPlan.price);
+    }, [selectedPlan]);
 
     const handleMethodSelect = (m: PaymentMethod) => {
         setMethod(m);
         setStep('details');
+    };
+
+    const handleSplitChange = (field: keyof typeof splitSelection, value: any) => {
+        setSplitSelection(prev => ({ ...prev, [field]: value }));
+    };
+
+    // Helper function to calculate Bs amount based on plan currency
+    const calculateBsAmount = (amount: number): number | undefined => {
+        if (selectedPlan.currency === 'Bs') {
+            return amount;
+        } else if (selectedPlan.currency === '€') {
+            return rates?.euro ? Number((amount * rates.euro).toFixed(2)) : undefined;
+        } else {
+            return rates?.dolar ? Number((amount * rates.dolar).toFixed(2)) : undefined;
+        }
+    };
+
+    const getBsAmount = (amount: number, currency: string) => {
+        if (!rates) return 0;
+        const rate = currency === '€' ? rates.euro : rates.dolar;
+        return (amount * rate).toFixed(2);
     };
 
     const getInstructions = (id: string) => {
@@ -56,25 +94,71 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
         try {
             if (!user || !method) return;
 
-            // For manual methods, status is 'verification'. For Credit Card (Mock), it could be 'approved' immediately but let's stick to verification for uniformity in this enterprise flow or simulate instant.
-            // User requested: "verification la hace el admin manualmente" -> imply all manual methods.
-            // Let's assume Credit Card is instant (Mock) and others are manual.
+            // Fetch fresh exchange rates before processing payment
+            const freshRates = await GymService.getExchangeRates();
+            if (freshRates) {
+                setRates(freshRates); // Update displayed rates
+            }
 
-            const isInstant = method === 'credit_card';
-            const status = isInstant ? 'approved' : 'verification';
+            // Split Validation
+            if (method === 'split') {
+                const totalSplit = splitSelection.amount1 + splitSelection.amount2;
+                if (Math.abs(totalSplit - payAmount) > 0.1) {
+                    alert(`La suma de los pagos (${totalSplit}) debe ser igual al total a pagar (${payAmount})`);
+                    setIsLoading(false);
+                    return;
+                }
+                if (!splitSelection.method1 || !splitSelection.method2) {
+                    alert('Selecciona ambos métodos de pago');
+                    setIsLoading(false);
+                    return;
+                }
+            }
 
-            await GymService.submitPayment({
+            // All payments require manual verification
+            const status = 'verification' as 'approved' | 'verification' | 'pending' | 'rejected';
+
+            // Calculate Bs amount and exchange rate based on plan currency using FRESH rates
+            let currentRate: number | undefined;
+            let amountBsVal: number | undefined;
+
+            if (selectedPlan.currency === 'Bs') {
+                // Plan is already in Bolívares, no conversion needed
+                amountBsVal = payAmount;
+                currentRate = undefined;
+            } else if (selectedPlan.currency === '€') {
+                // Plan is in Euros, use fresh euro rate
+                currentRate = freshRates?.euro;
+                amountBsVal = currentRate ? Number((payAmount * currentRate).toFixed(2)) : undefined;
+            } else {
+                // Plan is in USD, use fresh dollar rate
+                currentRate = freshRates?.dolar;
+                amountBsVal = currentRate ? Number((payAmount * currentRate).toFixed(2)) : undefined;
+            }
+
+            const paymentData: any = {
                 userId: user.uid,
-                amount: selectedPlan.price,
+                amount: payAmount,
                 method: method,
                 description: `Suscripción ${selectedPlan.title}`,
                 userEmail: user.email,
                 currency: selectedPlan.currency,
-                reference: isInstant ? `CC-${Date.now()}` : reference,
+                reference: method === 'split' ? `SPLIT-${Date.now()}` : reference,
                 status: status,
-                isPartial: false,
-                timestamp: Date.now()
-            });
+                isPartial: isPartial || payAmount < selectedPlan.price,
+                timestamp: Date.now(),
+                amountBs: amountBsVal,
+                exchangeRate: currentRate
+            };
+
+            if (method === 'split') {
+                paymentData.splitDetails = [
+                    { method: splitSelection.method1 as string, amount: splitSelection.amount1, reference: splitSelection.ref1 },
+                    { method: splitSelection.method2 as string, amount: splitSelection.amount2, reference: splitSelection.ref2 }
+                ];
+            }
+
+            await GymService.submitPayment(paymentData);
 
             // Simulate processing
             setTimeout(() => {
@@ -82,10 +166,13 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                 setIsLoading(false);
             }, 1000);
         } catch (error) {
+            console.error(error);
             setIsLoading(false);
             alert('Error al registrar el pago');
         }
     };
+
+
 
     if (step === 'success') {
         const isVerification = method !== 'credit_card';
@@ -99,11 +186,35 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                 <h2 className="text-3xl font-display italic text-white mb-2">
                     {isVerification ? 'PAGO EN REVISIÓN' : '¡PAGO EXITOSO!'}
                 </h2>
-                <p className="text-gray-400 mb-8 max-w-sm mx-auto">
+                <p className="text-gray-400 mb-4 max-w-sm mx-auto">
                     {isVerification
                         ? 'Tu pago ha sido registrado y está pendiente de verificación por un administrador. Te notificaremos cuando se apruebe.'
                         : `Bienvenido a la élite. Tu plan ${selectedPlan.title} está activo.`}
                 </p>
+
+                {/* Show payment details with BCV rate */}
+                <div className="bg-neutral-800/50 rounded-lg p-4 max-w-sm mx-auto mb-8">
+                    <div className="text-sm text-gray-400 mb-2">Monto pagado:</div>
+                    <div className="text-2xl font-bold text-brand-green mb-3">
+                        {selectedPlan.currency}{payAmount}
+                    </div>
+                    {rates && selectedPlan.currency !== 'Bs' && (
+                        <div className="text-xs text-gray-500 border-t border-gray-700 pt-3">
+                            <div>Equivalente: Bs {calculateBsAmount(payAmount)?.toFixed(2) || '...'}</div>
+                            <div className="mt-1">
+                                Tasa BCV: {selectedPlan.currency === '€'
+                                    ? `${rates.euro} Bs/€`
+                                    : `${rates.dolar} Bs/$`}
+                            </div>
+                        </div>
+                    )}
+                    {selectedPlan.currency === 'Bs' && (
+                        <div className="text-xs text-gray-500 border-t border-gray-700 pt-3">
+                            Precio en Bolívares
+                        </div>
+                    )}
+                </div>
+
                 <Button onClick={() => router.push('/dashboard')} size="lg" variant={isVerification ? 'outline' : 'primary'}>
                     IR AL DASHBOARD
                 </Button>
@@ -143,7 +254,27 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                 {step === 'summary' && (
                     <div className="space-y-6">
                         <h3 className="font-display italic text-white text-xl">CONFIRMAR COMPRA</h3>
-                        <p className="text-gray-400 text-sm">Estás a un paso de unirte. Selecciona cómo deseas pagar.</p>
+
+                        <div className="flex justify-between items-center text-lg font-bold text-white border-t border-gray-800 pt-4">
+                            <span>TOTAL A PAGAR:</span>
+                            <div className="text-right">
+                                <span className="text-brand-green">{selectedPlan.currency}{payAmount}</span>
+                                {rates && selectedPlan.currency !== 'Bs' && (
+                                    <p className="text-xs text-gray-500 font-normal mt-1">
+                                        {selectedPlan.currency === '€'
+                                            ? `Equivalente: Bs ${calculateBsAmount(payAmount)?.toFixed(2) || '...'} (Tasa BCV: ${rates.euro} Bs/€)`
+                                            : `Equivalente: Bs ${calculateBsAmount(payAmount)?.toFixed(2) || '...'} (Tasa BCV: ${rates.dolar} Bs/$)`
+                                        }
+                                    </p>
+                                )}
+                                {selectedPlan.currency === 'Bs' && (
+                                    <p className="text-xs text-gray-500 font-normal mt-1">
+                                        Precio en Bolívares
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
                         <Button onClick={() => setStep('method')} className="w-full" size="lg">
                             CONTINUAR A PAGO
                         </Button>
@@ -182,35 +313,94 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                             <h3 className="font-display italic text-white uppercase">DETALLES: <span className="text-brand-green">{PAYMENT_METHODS.find(m => m.id === method)?.label}</span></h3>
                         </div>
 
-                        {/* Instructions Box */}
-                        <div className="bg-brand-green/5 border border-brand-green/20 p-4 rounded mb-6">
-                            <p className="text-xs text-brand-green font-bold uppercase mb-1">INSTRUCCIONES DE PAGO:</p>
-                            <p className="text-sm text-gray-300 font-mono">
-                                {getInstructions(method)}
-                            </p>
-                        </div>
+                        {method === 'split' ? (
+                            <div className="space-y-6">
+                                <p className="text-sm text-gray-400">Selecciona los dos métodos de pago y distribuye el monto total ({selectedPlan.currency}{payAmount}).</p>
 
-                        {method === 'credit_card' ? (
-                            <>
-                                <Input label="Titular" placeholder="NOMBRE EN TARJETA" required />
-                                <Input label="Número" placeholder="0000 0000 0000 0000" required />
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input label="Exp" placeholder="MM/YY" required />
-                                    <Input label="CVC" placeholder="123" type="password" required />
-                                </div>
-                            </>
+                                {[1, 2].map((num) => (
+                                    <div key={num} className="bg-neutral-900 border border-gray-800 p-4 rounded">
+                                        <h4 className="font-bold text-white mb-3">Pago {num}</h4>
+                                        <div className="space-y-3">
+                                            {/* Method Select */}
+                                            <select
+                                                className="w-full bg-black border border-gray-700 rounded p-2 text-white"
+                                                value={splitSelection[`method${num}` as 'method1' | 'method2']}
+                                                onChange={(e) => setSplitSelection({ ...splitSelection, [`method${num}`]: e.target.value })}
+                                            >
+                                                <option value="">Selecciona Método</option>
+                                                {PAYMENT_METHODS.filter(p => p.id !== 'split').map(p => (
+                                                    <option key={p.id} value={p.id}>{p.label}</option>
+                                                ))}
+                                            </select>
+
+                                            {/* Instructions if selected */}
+                                            {splitSelection[`method${num}` as 'method1' | 'method2'] && (
+                                                <p className="text-xs text-gray-500 font-mono bg-black/50 p-2 rounded">
+                                                    {getInstructions(splitSelection[`method${num}` as 'method1' | 'method2'] as string)}
+                                                </p>
+                                            )}
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <Input
+                                                    label="Monto"
+                                                    type="number"
+                                                    value={splitSelection[`amount${num}` as 'amount1' | 'amount2']}
+                                                    onChange={(e) => setSplitSelection({ ...splitSelection, [`amount${num}`]: Number(e.target.value) })}
+                                                />
+                                                <Input
+                                                    label="Referencia"
+                                                    placeholder="Ref/Comp"
+                                                    value={splitSelection[`ref${num}` as 'ref1' | 'ref2']}
+                                                    onChange={(e) => setSplitSelection({ ...splitSelection, [`ref${num}`]: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         ) : (
                             <>
-                                <Input
-                                    label="NÚMERO DE REFERENCIA / COMPROBANTE"
-                                    placeholder="Ej. 12345678"
-                                    required
-                                    value={reference}
-                                    onChange={(e) => setReference(e.target.value)}
-                                />
-                                <p className="text-xs text-gray-500">
-                                    Por favor ingresa el número de confirmación de tu transacción para que podamos verificarla.
-                                </p>
+                                {/* Instructions Box */}
+                                <div className="bg-brand-green/5 border border-brand-green/20 p-4 rounded mb-6">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <p className="text-xs text-brand-green font-bold uppercase">INSTRUCCIONES DE PAGO:</p>
+                                        {['pago_movil', 'transferencia', 'efectivo'].includes(method) && rates && (
+                                            <div className="text-right">
+                                                <p className="text-xs text-gray-400">MONTO A PAGAR</p>
+                                                <p className="text-xl font-mono text-white font-bold">
+                                                    Bs. {getBsAmount(payAmount, selectedPlan.currency)}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-gray-300 font-mono">
+                                        {getInstructions(method || '')}
+                                    </p>
+                                </div>
+
+                                {method === 'credit_card' ? (
+                                    <>
+                                        <Input label="Titular" placeholder="NOMBRE EN TARJETA" required />
+                                        <Input label="Número" placeholder="0000 0000 0000 0000" required />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Input label="Exp" placeholder="MM/YY" required />
+                                            <Input label="CVC" placeholder="123" type="password" required />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Input
+                                            label="NÚMERO DE REFERENCIA / COMPROBANTE"
+                                            placeholder="Ej. 12345678"
+                                            required
+                                            value={reference}
+                                            onChange={(e) => setReference(e.target.value)}
+                                        />
+                                        <p className="text-xs text-gray-500">
+                                            Por favor ingresa el número de confirmación de tu transacción para que podamos verificarla.
+                                        </p>
+                                    </>
+                                )}
                             </>
                         )}
 

@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className="bg-noise min-h-screen flex flex-col">
+      <body className="bg-noise min-h-screen flex flex-col" suppressHydrationWarning>
         <Navbar />
         <main className="flex-grow">
           {children}

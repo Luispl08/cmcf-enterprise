@@ -23,6 +23,19 @@ export default function AdminUsersPage() {
         return matchesSearch && matchesFilter;
     });
 
+    const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+
+    const handleUpdateStatus = async (uid: string, newStatus: 'active' | 'inactive') => {
+        if (!confirm(`¿Cambiar estado del usuario a ${newStatus.toUpperCase()}?`)) return;
+        try {
+            await GymService.updateUser(uid, { membershipStatus: newStatus });
+            setUsers(users.map(u => u.uid === uid ? { ...u, membershipStatus: newStatus } : u));
+            setEditingUser(null);
+        } catch (error) {
+            alert('Error al actualizar estado');
+        }
+    };
+
     return (
         <div className="p-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -86,13 +99,50 @@ export default function AdminUsersPage() {
                                     {u.membershipExpiry ? new Date(u.membershipExpiry).toLocaleDateString() : '-'}
                                 </td>
                                 <td className="p-4 text-right">
-                                    <button className="text-brand-green hover:underline text-xs">EDITAR</button>
+                                    <button
+                                        onClick={() => setEditingUser(u)}
+                                        className="text-brand-green hover:underline text-xs"
+                                    >
+                                        EDITAR
+                                    </button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+
+            {/* EDIT STATUS MODAL */}
+            {editingUser && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                    <div className="bg-neutral-900 p-6 rounded-lg max-w-sm w-full border border-gray-800">
+                        <h3 className="text-xl font-bold text-white mb-4">Editar Estado</h3>
+                        <p className="text-gray-400 mb-6">Cambiar estado para <strong>{editingUser.fullName}</strong></p>
+
+                        <div className="space-y-3">
+                            <Button
+                                className="w-full bg-green-600 hover:bg-green-500 text-white"
+                                onClick={() => handleUpdateStatus(editingUser.uid, 'active')}
+                            >
+                                ACTIVAR MEMBRESÍA
+                            </Button>
+                            <Button
+                                className="w-full bg-red-900 hover:bg-red-800 text-white"
+                                onClick={() => handleUpdateStatus(editingUser.uid, 'inactive')}
+                            >
+                                DESACTIVAR (INACTIVO)
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="w-full mt-4"
+                                onClick={() => setEditingUser(null)}
+                            >
+                                CANCELAR
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

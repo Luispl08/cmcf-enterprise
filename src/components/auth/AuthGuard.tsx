@@ -11,6 +11,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         if (!isLoading && !user) {
             router.push('/login');
         }
+        // Ensure real-time subscription is active
+        if (user) {
+            useAppStore.getState().subscribeToUser(user.uid);
+        }
     }, [user, isLoading, router]);
 
     if (isLoading) {

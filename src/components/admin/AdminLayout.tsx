@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
-import { LayoutDashboard, Users, CreditCard, Dumbbell, Settings, LogOut, DollarSign, Menu, X, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, CreditCard, Dumbbell, Settings, LogOut, DollarSign, Menu, X, ClipboardList, Calendar } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
 const NAV_ITEMS = [
@@ -12,7 +12,9 @@ const NAV_ITEMS = [
     { name: 'Check-In', href: '/admin/checkin', icon: ClipboardList },
     { name: 'Pagos', href: '/admin/payments', icon: CreditCard },
     { name: 'Precios', href: '/admin/plans', icon: DollarSign },
-    { name: 'Clases', href: '/admin/classes', icon: Dumbbell },
+    { name: 'Clases', href: '/admin/classes', icon: Calendar },
+    { name: 'Competencias', href: '/admin/competitions', icon: Dumbbell },
+    { name: 'Entrenadores', href: '/admin/trainers', icon: Users },
     { name: 'Admin', href: '/admin/settings', icon: Settings },
 ];
 

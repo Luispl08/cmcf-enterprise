@@ -30,6 +30,8 @@ export default function Navbar() {
                 {/* Desktop Nav */}
                 <div className="hidden md:flex items-center space-x-6">
                     <Link href="/" className="font-display italic text-sm hover:text-brand-green">INICIO</Link>
+                    <Link href="/classes" className="font-display italic text-sm hover:text-brand-green">CLASES</Link>
+                    <Link href="/competitions" className="font-display italic text-sm hover:text-brand-green">COMPETENCIAS</Link>
 
                     {user ? (
                         <>
@@ -57,6 +59,8 @@ export default function Navbar() {
             {isOpen && (
                 <div className="md:hidden absolute top-16 left-0 w-full bg-neutral-900 border-b border-gray-800 shadow-xl flex flex-col p-4 space-y-4 text-center animate-in slide-in-from-top-5">
                     <Link href="/" onClick={() => setIsOpen(false)} className="py-2 text-white font-display italic text-xl">INICIO</Link>
+                    <Link href="/classes" onClick={() => setIsOpen(false)} className="py-2 text-white font-display italic text-xl">CLASES</Link>
+                    <Link href="/competitions" onClick={() => setIsOpen(false)} className="py-2 text-white font-display italic text-xl">COMPETENCIAS</Link>
                     {user ? (
                         <>
                             <Link href="/dashboard" onClick={() => setIsOpen(false)} className="py-2 text-brand-green font-display italic text-xl">MI DASHBOARD</Link>

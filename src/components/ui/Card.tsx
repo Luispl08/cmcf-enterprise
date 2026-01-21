@@ -11,8 +11,9 @@ interface CardProps {
 export default function Card({ title, children, className, noPadding = false }: CardProps) {
     return (
         <div className={clsx(
-            "relative group overflow-hidden bg-neutral-900/50 border border-white/10 backdrop-blur-sm",
+            "relative group overflow-hidden bg-neutral-900/50 border border-white/10 backdrop-blur-sm text-gray-300",
             "hover:border-brand-green/50 transition-all duration-300",
+            !noPadding && "p-6",
             className
         )}>
             {/* Decorative Corner */}
@@ -21,16 +22,14 @@ export default function Card({ title, children, className, noPadding = false }: 
             </div>
 
             {title && (
-                <div className="px-6 py-4 border-b border-white/5">
+                <div className="px-6 py-4 border-b border-white/5 -mx-6 -mt-6 mb-6">
                     <h3 className="font-display italic text-xl text-white group-hover:text-brand-green transition-colors">
                         {title}
                     </h3>
                 </div>
             )}
 
-            <div className={clsx("text-gray-300", !noPadding && "p-6")}>
-                {children}
-            </div>
+            {children}
         </div>
     );
 }

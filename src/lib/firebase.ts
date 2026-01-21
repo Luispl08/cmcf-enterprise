@@ -27,9 +27,12 @@ import {
     Firestore,
     Timestamp,
     runTransaction,
-    collectionGroup
+    collectionGroup,
+    onSnapshot,
+    Unsubscribe
 } from 'firebase/firestore';
-import { UserProfile, Payment, GymClass, Plan, Staff, GymConfig, Review } from '@/types';
+import { getStorage, ref, uploadBytes, getDownloadURL, FirebaseStorage } from 'firebase/storage';
+import { UserProfile, Payment, GymClass, Plan, Staff, GymConfig, Review, Trainer, Competition, CompetitionRegistration } from '@/types';
 import { addMonths } from 'date-fns';
 
 // 1. CONFIGURATION
@@ -46,6 +49,7 @@ const firebaseConfig = {
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let db: Firestore | undefined;
+let storage: FirebaseStorage | undefined;
 
 const isOnline = !!firebaseConfig.apiKey;
 
@@ -53,6 +57,7 @@ if (isOnline) {
     app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     db = getFirestore(app);
+    storage = getStorage(app);
 } else {
     console.warn("⚠️ CMCF ENTERPRISE: Running in Mock Mode (No Firebase Keys)");
 }
@@ -124,6 +129,30 @@ export class GymService {
         return [];
     }
 
+    static async getUserByCedula(cedula: string): Promise<UserProfile | null> {
+        if (!cedula) return null;
+        if (isOnline && db) {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('cedula', '==', cedula), limit(1));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                return snap.docs[0].data() as UserProfile;
+            }
+        }
+        return null;
+    }
+
+    static subscribeToUserProfile(uid: string, callback: (user: UserProfile) => void): Unsubscribe | null {
+        if (isOnline && db) {
+            return onSnapshot(doc(db, 'users', uid), (doc) => {
+                if (doc.exists()) {
+                    callback(doc.data() as UserProfile);
+                }
+            });
+        }
+        return null;
+    }
+
     static async checkInUser(uid: string): Promise<void> {
         if (isOnline && db) {
             const userRef = doc(db, 'users', uid);
@@ -169,7 +198,12 @@ export class GymService {
     // --- REVIEWS ---
     static async addReview(review: Omit<Review, 'id'>): Promise<void> {
         if (isOnline && db) {
-            await addDoc(collection(db, 'reviews'), review);
+            // Sanitize data (Firestore doesn't like undefined)
+            const safeReview = {
+                ...review,
+                userPhotoUrl: review.userPhotoUrl || null
+            };
+            await addDoc(collection(db, 'reviews'), safeReview);
         }
     }
 
@@ -200,6 +234,7 @@ export class GymService {
                 currency: '$',
                 description: 'Acceso por un día',
                 visible: true,
+                durationDays: 1,
                 features: ['Acceso a Pesas', 'Válido por 24h']
             },
             {
@@ -209,6 +244,7 @@ export class GymService {
                 currency: '$',
                 description: 'Lunes a Viernes',
                 visible: true,
+                durationDays: 30,
                 features: ['Acceso a Pesas', 'Área de Cardio', 'Lunes a Viernes']
             },
             {
@@ -219,6 +255,7 @@ export class GymService {
                 description: 'Acceso Total 24/7',
                 visible: true,
                 recommended: true,
+                durationDays: 30,
                 features: ['Lunes a Domingo', 'Acceso a Clases', 'Sin Restricciones']
             },
             {
@@ -228,6 +265,7 @@ export class GymService {
                 currency: '$',
                 description: 'VIP + Entrenador',
                 visible: true,
+                durationDays: 30,
                 features: ['Lunes a Domingo', 'Entrenador Personal', 'Nutrición Básica', 'Toalla y Agua']
             }
         ];
@@ -247,6 +285,17 @@ export class GymService {
     static async submitPayment(payment: Omit<Payment, 'id'>): Promise<void> {
         if (isOnline && db) {
             await addDoc(collection(db, 'payments'), payment);
+
+            // Update user status to 'pending' if it's currently inactive
+            // This ensures the UI shows "Verificando Pago"
+            const userRef = doc(db, 'users', payment.userId);
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                const userData = userSnap.data() as UserProfile;
+                if (userData.membershipStatus !== 'active') {
+                    await updateDoc(userRef, { membershipStatus: 'pending' });
+                }
+            }
         } else {
             console.log("Mock Payment Submitted:", payment);
         }
@@ -262,40 +311,50 @@ export class GymService {
         return [];
     }
 
+    static async getAllPayments(limitCount: number = 50): Promise<Payment[]> {
+        if (isOnline && db) {
+            const q = query(collection(db, 'payments'), orderBy('timestamp', 'desc'), limit(limitCount));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
+        }
+        return [];
+    }
+
+    static async getUserPayments(userId: string): Promise<Payment[]> {
+        if (isOnline && db) {
+            const q = query(collection(db, 'payments'), where('userId', '==', userId), orderBy('timestamp', 'desc'));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
+        }
+        return [];
+    }
+
     static async updatePaymentStatus(paymentId: string, status: Payment['status'], feedback?: string): Promise<void> {
         if (isOnline && db) {
-            await updateDoc(doc(db, 'payments', paymentId), {
+            const paymentRef = doc(db, 'payments', paymentId);
+
+            // 1. Update Payment
+            await updateDoc(paymentRef, {
                 status,
                 feedback: feedback || null
             });
-        }
-    }
 
-    static async approvePayment(paymentId: string, userId: string): Promise<void> {
-        if (isOnline && db) {
-            // 1. Update Payment Status
-            await this.updatePaymentStatus(paymentId, 'approved');
-
-            // 2. Calculate New Expiry
-            const userRef = doc(db, 'users', userId);
-            const userSnap = await getDoc(userRef);
-
-            if (userSnap.exists()) {
-                const userData = userSnap.data() as UserProfile;
-                const currentExpiry = userData.membershipExpiry || 0;
-                const now = Date.now();
-
-                // If active and future, add 1 month to existing expiry. If expired, add 1 month to NOW.
-                const baseDate = currentExpiry > now ? currentExpiry : now;
-                const newExpiry = addMonths(baseDate, 1).getTime();
-
-                await updateDoc(userRef, {
-                    membershipStatus: 'active',
-                    membershipExpiry: newExpiry
-                });
+            // 2. Sync Rejection to User Profile
+            if (status === 'rejected') {
+                const pSnap = await getDoc(paymentRef);
+                if (pSnap.exists()) {
+                    const pData = pSnap.data() as Payment;
+                    const userRef = doc(db, 'users', pData.userId);
+                    await updateDoc(userRef, {
+                        membershipStatus: 'rejected',
+                        rejectionFeedback: feedback || 'Pago rechazado. Por favor contacte a soporte.'
+                    });
+                }
             }
         }
     }
+
+
 
     static async updatePlan(planId: string, data: Partial<Plan>): Promise<void> {
         if (isOnline && db) {
@@ -375,7 +434,8 @@ export class GymService {
                 if (attendeeDoc.exists()) throw new Error("Ya estás inscrito en esta clase");
 
                 const classData = classDoc.data() as GymClass;
-                if (classData.bookedCount >= classData.capacity) throw new Error("Clase llena");
+                // Check capacity only if NOT unlimited
+                if (!classData.isUnlimited && classData.bookedCount >= classData.capacity) throw new Error("Clase llena");
 
                 transaction.update(classRef, { bookedCount: increment(1) });
                 transaction.set(attendeeRef, {
@@ -426,6 +486,122 @@ export class GymService {
     }
 
 
+    // --- COMPETITIONS ---
+    static async getCompetitions(): Promise<Competition[]> {
+        if (isOnline && db) {
+            const q = query(collection(db, 'competitions'), orderBy('date', 'asc'));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data() } as Competition));
+        }
+        return [];
+    }
+
+    static async addCompetition(comp: Omit<Competition, 'id'>): Promise<string> {
+        if (isOnline && db) {
+            const ref = await addDoc(collection(db, 'competitions'), comp);
+            return ref.id;
+        }
+        return '';
+    }
+
+    static async deleteCompetition(id: string): Promise<void> {
+        if (isOnline && db) {
+            await deleteDoc(doc(db, 'competitions', id));
+        }
+    }
+
+    static async registerForCompetition(compId: string, data: Omit<CompetitionRegistration, 'id' | 'timestamp'>): Promise<void> {
+        if (isOnline && db) {
+            const compRef = doc(db, 'competitions', compId);
+            const regRef = doc(collection(db, 'competitions', compId, 'registrations')); // Auto-ID
+
+            await runTransaction(db, async (transaction) => {
+                const compDoc = await transaction.get(compRef);
+                if (!compDoc.exists()) throw new Error("Competencia no encontrada");
+
+                const compData = compDoc.data() as Competition;
+                if (!compData.isUnlimited && compData.registeredCount >= compData.capacity) {
+                    throw new Error("Cupos agotados");
+                }
+
+                // Check if user (leader) already registered? 
+                // We'd need to query registrations by userId, but transaction writes are tricky with queries.
+                // Ideally we use a subcollection 'registrations' and maybe key it by leader ID if one team per leader allowed.
+                // But for now let's assume specific check isn't strictly enforced in transaction to keep it simple, 
+                // or we rely on client side check + security rules later.
+
+                transaction.update(compRef, { registeredCount: increment(1) });
+                transaction.set(regRef, {
+                    ...data,
+                    competitionId: compId,
+                    timestamp: serverTimestamp()
+                });
+            });
+        }
+    }
+
+    static async getUserCompetitions(uid: string): Promise<CompetitionRegistration[]> {
+        if (isOnline && db) {
+            const q = query(collectionGroup(db, 'registrations'), where('userId', '==', uid)); // Search by leader
+            // If we want to find if they are a MEMBER of a team, we'd need a separate array-contains query or similar.
+            // For now, let's just find where they are Leader.
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().timestamp?.toMillis() || Date.now() } as CompetitionRegistration));
+        }
+        return [];
+    }
+
+    static async getCompetitionRegistrations(compId: string): Promise<CompetitionRegistration[]> {
+        if (isOnline && db) {
+            const q = query(collection(db, 'competitions', compId, 'registrations'), orderBy('timestamp', 'desc'));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().timestamp?.toMillis() || Date.now() } as CompetitionRegistration));
+        }
+        return [];
+    }
+
+    // --- TRAINERS ---
+    static async getTrainers(): Promise<Trainer[]> {
+        if (isOnline && db) {
+            const q = query(collection(db, 'trainers'), orderBy('name', 'asc'));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data() } as Trainer));
+        }
+        return [];
+    }
+
+    static async addTrainer(trainer: Omit<Trainer, 'id'>): Promise<string> {
+        if (isOnline && db) {
+            const ref = await addDoc(collection(db, 'trainers'), trainer);
+            return ref.id;
+        }
+        throw new Error('Offline');
+    }
+
+    static async updateTrainer(id: string, data: Partial<Trainer>): Promise<void> {
+        if (isOnline && db) {
+            await updateDoc(doc(db, 'trainers', id), data);
+        }
+    }
+
+    static async deleteTrainer(id: string): Promise<void> {
+        if (isOnline && db) {
+            await deleteDoc(doc(db, 'trainers', id));
+        }
+    }
+
+    static async processImageForDatabase(file: File | Blob): Promise<string> {
+        // "Guardado Local"/Data Matrix Strategy:
+        // Convert image to Base64 to store directly in Firestore.
+        // This avoids Firebase Storage permission issues entirely.
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+    }
+
     // --- CONFIG ---
     static async getGymConfig(): Promise<GymConfig> {
         if (isOnline && db) {
@@ -451,7 +627,156 @@ export class GymService {
         }
     }
 
+    // --- MANUAL ADMIN ACTIONS ---
+    // --- MANUAL ADMIN ACTIONS ---
+    static async createManualPayment(data: { cedula: string, amount: number, method: string, reference?: string, planId?: string }): Promise<void> {
+        if (isOnline && db) {
+            // 1. Find User
+            const user = await this.getUserByCedula(data.cedula);
+            if (!user) throw new Error("Usuario no encontrado con esa cédula");
+
+            // 2. Create Payment Record (Auto-Approved)
+            const paymentRef = doc(collection(db, 'payments'));
+            await setDoc(paymentRef, {
+                id: paymentRef.id,
+                userId: user.uid,
+                userEmail: user.email,
+                amount: data.amount,
+                currency: '$', // Defaulting to USD for manual
+                method: data.method,
+                reference: data.reference || 'PAGO-MANUAL-' + Date.now().toString().slice(-4), // Auto-gen if empty
+                description: 'Pago registrado manualmente por Admin',
+                status: 'approved',
+                isPartial: false,
+                timestamp: Date.now(),
+                planId: data.planId || user.planId // Use submitted plan or fallback to user's current
+            });
+
+            // 3. Update User Membership immediately
+            await this.approvePayment(paymentRef.id, user.uid);
+        }
+    }
+
+    // ... HELPERS ...
+
+    static async approvePayment(paymentId: string, userId: string): Promise<void> {
+        if (isOnline && db) {
+            // 1. Retrieve Payment to check for planId
+            const paymentRef = doc(db, 'payments', paymentId);
+            const paymentSnap = await getDoc(paymentRef);
+
+            if (!paymentSnap.exists()) {
+                throw new Error('Payment not found');
+            }
+
+            const pData = paymentSnap.data() as Payment;
+            const paidPlanId = pData.planId || '';
+
+            // 2. Update payment status to approved
+            await updateDoc(paymentRef, {
+                status: 'approved',
+                feedback: null
+            });
+
+            // 3. Calculate New Expiry
+            const userRef = doc(db, 'users', userId);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                throw new Error('User not found');
+            }
+
+            const userData = userSnap.data() as UserProfile;
+            const currentExpiry = userData.membershipExpiry || 0;
+            const now = Date.now();
+
+            // Determine Duration and get plan data
+            let durationDays = 30; // Default
+            let planData: Plan | null = null;
+
+            if (paidPlanId) {
+                // Try to fetch plan details for accurate duration
+                const planRef = doc(db, 'plans', paidPlanId);
+                const planSnap = await getDoc(planRef);
+                if (planSnap.exists()) {
+                    planData = planSnap.data() as Plan;
+                    durationDays = planData.durationDays || 30;
+                } else {
+                    // Fallback check on hardcoded list if not in DB
+                    const plans = await this.getPlans();
+                    const p = plans.find(pl => pl.id === paidPlanId);
+                    if (p) {
+                        planData = p;
+                        durationDays = p.durationDays;
+                    }
+                }
+            }
+
+            // If active and future, add to existing expiry. If expired, add to NOW.
+            const baseDate = currentExpiry > now ? currentExpiry : now;
+            const expiryDate = new Date(baseDate);
+
+            // Calculate expiration based on duration type
+            if (planSnap.exists()) {
+                const planData = planSnap.data() as Plan;
+                if (planData.durationType === 'months') {
+                    // Use calendar months for monthly/quarterly plans
+                    expiryDate.setMonth(expiryDate.getMonth() + (planData.durationValue || 1));
+                } else if (planData.durationType === 'days') {
+                    // Use fixed days for daily/weekly plans
+                    expiryDate.setDate(expiryDate.getDate() + (planData.durationValue || 1));
+                } else {
+                    // Fallback for old plans without durationType
+                    expiryDate.setDate(expiryDate.getDate() + durationDays);
+                }
+            } else {
+                // Fallback if plan not found in DB
+                expiryDate.setDate(expiryDate.getDate() + durationDays);
+            }
+
+            // 4. Update user membership
+            const userUpdate: any = {
+                membershipStatus: 'active',
+                membershipExpiry: expiryDate.getTime(),
+                rejectionFeedback: null
+            };
+
+            // Only update planId if we have a valid value
+            if (paidPlanId) {
+                userUpdate.planId = paidPlanId;
+            } else if (userData.planId) {
+                userUpdate.planId = userData.planId;
+            }
+
+            await updateDoc(userRef, userUpdate);
+        }
+    }
+
     // --- HELPERS ---
+    static async getExchangeRates(): Promise<{ dolar: number, euro: number, fecha: string } | null> {
+        if (isOnline) {
+            try {
+                const response = await fetch('/api/rates');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Status: ${response.status}`);
+                }
+
+                return {
+                    dolar: data.dolar,
+                    euro: data.euro,
+                    fecha: data.fecha
+                };
+            } catch (error) {
+                console.error("Error obteniendo tasas BCV:", error);
+                return null;
+            }
+        }
+        // Mock Rates
+        return { dolar: 36.5, euro: 39.2, fecha: 'MOCK-DATE' };
+    }
+
     private static mockProfile(role: 'admin' | 'user', email: string): UserProfile {
         return {
             uid: 'mock-' + Date.now() + Math.random(),

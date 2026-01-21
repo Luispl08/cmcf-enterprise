@@ -23,7 +23,7 @@ export default function AdminClassesPage() {
 
     // New Class Form State (as before) ...
     const [newClass, setNewClass] = useState<Partial<GymClass>>({
-        day: 'LUNES', time: '', name: '', coachName: '', capacity: 20, bookedCount: 0
+        day: 'LUNES', time: '', name: '', coachName: '', capacity: 20, bookedCount: 0, isUnlimited: false
     });
 
     const loadClasses = async () => {
@@ -104,7 +104,25 @@ export default function AdminClassesPage() {
                             <Input label="Nombre de la Clase" value={newClass.name} onChange={e => setNewClass({ ...newClass, name: e.target.value })} required placeholder="CROSSFIT" />
                             <div className="grid grid-cols-2 gap-4">
                                 <Input label="Hora" type="time" value={newClass.time} onChange={e => setNewClass({ ...newClass, time: e.target.value })} required />
-                                <Input label="Capacidad" type="number" value={String(newClass.capacity)} onChange={e => setNewClass({ ...newClass, capacity: Number(e.target.value) })} required />
+                                <div className="space-y-1">
+                                    <Input
+                                        label="Capacidad"
+                                        type="number"
+                                        value={String(newClass.capacity)}
+                                        onChange={e => setNewClass({ ...newClass, capacity: Number(e.target.value) })}
+                                        required={!newClass.isUnlimited}
+                                        disabled={newClass.isUnlimited}
+                                    />
+                                    <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={newClass.isUnlimited || false}
+                                            onChange={e => setNewClass({ ...newClass, isUnlimited: e.target.checked, capacity: e.target.checked ? 9999 : 20 })}
+                                            className="accent-brand-green"
+                                        />
+                                        Cupos Ilimitados
+                                    </label>
+                                </div>
                             </div>
                             <Input label="Entrenador" value={newClass.coachName} onChange={e => setNewClass({ ...newClass, coachName: e.target.value })} required placeholder="Coach Name" />
 
@@ -183,13 +201,18 @@ export default function AdminClassesPage() {
                                             <User size={14} className="mr-2" /> {c.coachName}
                                         </div>
                                         <div className="flex items-center text-gray-400 text-sm">
-                                            <Users size={14} className="mr-2" /> {c.bookedCount} / {c.capacity} Inscritos
+                                            <Users size={14} className="mr-2" />
+                                            {c.isUnlimited ? (
+                                                <span className="text-brand-green font-bold">Cupos Ilimitados</span>
+                                            ) : (
+                                                `${c.bookedCount} / ${c.capacity} Inscritos`
+                                            )}
                                         </div>
 
                                         <div className="mt-4 pt-4 border-t border-gray-800">
                                             <Button
                                                 size="sm"
-                                                variant="secondary"
+                                                variant="outline"
                                                 className="w-full text-xs"
                                                 onClick={() => handleViewAttendees(c)}
                                             >

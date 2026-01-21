@@ -3,7 +3,7 @@ import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/navigation';
-import { Calendar, AlertTriangle, CheckCircle, Clock, Star } from 'lucide-react';
+import { Calendar, AlertTriangle, CheckCircle, Clock, Star, Trophy } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { GymService } from '@/lib/firebase';
@@ -83,7 +83,8 @@ export default function DashboardPage() {
         };
 
         fetchNextClass();
-    }, [user]);
+        fetchNextClass();
+    }, [user?.uid]);
 
 
     return (
@@ -141,8 +142,15 @@ export default function DashboardPage() {
                             </>
                         ) : isPending ? (
                             <>
-                                <p className="text-2xl font-bold text-yellow-500 uppercase">EN VERIFICACIÓN</p>
-                                <p className="text-gray-400 text-sm">Tu pago está siendo revisado por un administrador.</p>
+                                <p className="text-xl font-bold text-yellow-500 uppercase">EN VERIFICACIÓN</p>
+                                <p className="text-gray-400 text-xs mt-1">Tu pago está siendo revisado.</p>
+                            </>
+                        ) : user.membershipStatus === 'rejected' ? (
+                            <>
+                                <p className="text-xl font-bold text-red-500 uppercase">PAGO RECHAZADO</p>
+                                <p className="text-red-400 text-xs mt-1 bg-red-900/20 p-2 rounded border border-red-500/30">
+                                    {user.rejectionFeedback || 'Consulta con administración.'}
+                                </p>
                             </>
                         ) : (
                             <>
@@ -198,9 +206,99 @@ export default function DashboardPage() {
                     )}
                 </Card>
 
+                {/* Payment History */}
+                <PaymentHistoryCard user={user} />
+
                 <ReviewCard user={user} />
+
+                {/* Next Competition Widget */}
+                <NextCompetitionCard user={user} />
             </div>
         </div>
+    );
+}
+
+function NextCompetitionCard({ user }: { user: any }) {
+    const [comp, setComp] = useState<any | null>(null);
+    const [loading, setLoading] = useState(true);
+    const router = useRouter();
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const registrations = await GymService.getUserCompetitions(user.uid);
+                if (registrations.length === 0) {
+                    setLoading(false);
+                    return;
+                }
+
+                // Get all competitions to match (efficency note: could be optimized to fetch only needed)
+                const allComps = await GymService.getCompetitions();
+
+                // Find user's upcoming competitions
+                const myComps = allComps.filter(c =>
+                    registrations.some(r => r.competitionId === c.id) && c.date > Date.now()
+                ).sort((a, b) => a.date - b.date);
+
+                if (myComps.length > 0) {
+                    setComp(myComps[0]);
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [user]);
+
+    if (loading) return null; // Or skeleton
+
+    if (!comp) {
+        return (
+            <Card title="COMPETENCIAS" className="relative overflow-hidden group hover:border-brand-green/30 transition-colors">
+                <div className="flex flex-col items-center justify-center text-center p-4">
+                    <div className="bg-neutral-800 p-3 rounded-full mb-3 group-hover:bg-brand-green/20 transition-colors">
+                        <Trophy size={24} className="text-gray-500 group-hover:text-brand-green transition-colors" />
+                    </div>
+                    <p className="text-gray-400 text-sm mb-4">¿Listo para demostrar tu nivel?</p>
+                    <Button variant="outline" className="w-full text-xs" onClick={() => router.push('/competitions')}>
+                        VER EVENTOS
+                    </Button>
+                </div>
+            </Card>
+        );
+    }
+
+    return (
+        <Card title="PRÓXIMA COMPETENCIA" className="relative overflow-hidden border-brand-green/30">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+                <Trophy size={100} className="text-brand-green" />
+            </div>
+
+            <div className="relative z-10">
+                <h3 className="text-2xl font-display font-bold italic text-white mb-1">{comp.name}</h3>
+                <div className="flex items-center gap-2 text-brand-green font-bold text-sm mb-4">
+                    <Calendar size={14} />
+                    {new Date(comp.date).toLocaleDateString()}
+                </div>
+
+                <div className="space-y-1 text-sm text-gray-400 mb-6">
+                    <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-brand-green"></span>
+                        Categoría: <span className="text-white capitalize">{comp.category}</span>
+                    </p>
+                    <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-brand-green"></span>
+                        Modalidad: <span className="text-white capitalize">{comp.type}</span>
+                    </p>
+                </div>
+
+                <Button className="w-full" onClick={() => router.push('/competitions')}>
+                    VER DETALLES
+                </Button>
+            </div>
+        </Card>
     );
 }
 
@@ -293,6 +391,97 @@ function ReviewCard({ user }: { user: any }) {
                 />
                 <Button onClick={handleSubmit} disabled={loading || !comment.trim()} className="w-full">
                     {loading ? "ENVIANDO..." : "ENVIAR OPINIÓN"}
+                </Button>
+            </div>
+        </Card>
+    );
+}
+
+function PaymentHistoryCard({ user }: { user: any }) {
+    const [latestPayment, setLatestPayment] = useState<any | null>(null);
+    const [loading, setLoading] = useState(true);
+    const router = useRouter();
+
+    useEffect(() => {
+        const loadPayments = async () => {
+            try {
+                const data = await GymService.getUserPayments(user.uid);
+                setLatestPayment(data[0] || null);
+            } catch (e) {
+                console.error('Error loading payments:', e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadPayments();
+    }, [user.uid]);
+
+    const getStatusBadge = (status: string) => {
+        const badges = {
+            approved: { label: 'APROBADO', className: 'bg-green-900/30 text-brand-green border-brand-green/50' },
+            pending: { label: 'EN VERIFICACIÓN', className: 'bg-yellow-900/30 text-yellow-500 border-yellow-500/50' },
+            rejected: { label: 'RECHAZADO', className: 'bg-red-900/30 text-red-500 border-red-500/50' },
+            verification: { label: 'VERIFICANDO', className: 'bg-blue-900/30 text-blue-500 border-blue-500/50' }
+        };
+        const badge = badges[status as keyof typeof badges] || badges.pending;
+        return <span className={`text-[10px] font-bold px-2 py-1 rounded border ${badge.className}`}>{badge.label}</span>;
+    };
+
+    if (loading) {
+        return (
+            <Card title="ÚLTIMO PAGO" className="col-span-full md:col-span-2">
+                <div className="text-center py-8 text-gray-500">Cargando...</div>
+            </Card>
+        );
+    }
+
+    if (!latestPayment) {
+        return (
+            <Card title="HISTORIAL DE PAGOS" className="col-span-full">
+                <div className="text-center py-8 text-gray-400 italic">
+                    No tienes pagos registrados aún.
+                </div>
+            </Card>
+        );
+    }
+
+    return (
+        <Card title="ÚLTIMO PAGO" className="col-span-full md:col-span-2">
+            <div className="space-y-4">
+                <div className={`p-4 rounded border ${latestPayment.status === 'rejected'
+                    ? 'border-red-500/30 bg-red-900/10'
+                    : latestPayment.status === 'approved'
+                        ? 'border-green-500/30 bg-green-900/10'
+                        : 'border-gray-700 bg-neutral-900'
+                    }`}>
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-2xl font-display font-bold text-white">
+                            {latestPayment.currency}{latestPayment.amount}
+                        </span>
+                        {getStatusBadge(latestPayment.status)}
+                    </div>
+                    <div className="text-xs text-gray-400 space-y-1">
+                        <p>Método: <span className="text-gray-300 capitalize">{latestPayment.method.replace('_', ' ')}</span></p>
+                        <p>Ref: <span className="text-gray-300">{latestPayment.reference}</span></p>
+                        <p className="text-[10px]">{new Date(latestPayment.timestamp).toLocaleDateString('es-VE')}</p>
+                    </div>
+
+                    {latestPayment.status === 'rejected' && latestPayment.feedback && (
+                        <div className="mt-3 pt-3 border-t border-red-500/30">
+                            <p className="text-[10px] text-gray-500 uppercase mb-1">Motivo del rechazo:</p>
+                            <p className="text-xs text-red-400 bg-red-900/20 p-2 rounded">
+                                {latestPayment.feedback}
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                <Button
+                    variant="outline"
+                    className="w-full text-xs"
+                    onClick={() => router.push('/historial-pagos')}
+                >
+                    VER HISTORIAL COMPLETO
                 </Button>
             </div>
         </Card>

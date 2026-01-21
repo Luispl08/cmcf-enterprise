@@ -34,7 +34,9 @@ export default function PaymentWizard() {
                 method: method as any, // casting for now
                 reference: data.reference,
                 isPartial: data.isPartial || false,
-                ScreenshotUrl: '', // TODO: Implement real upload
+                screenshotUrl: '', // TODO: Implement real upload
+                status: 'pending',
+                timestamp: Date.now(),
             });
             setStep('confirm');
         } catch (e) {

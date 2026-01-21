@@ -717,8 +717,7 @@ export class GymService {
             const expiryDate = new Date(baseDate);
 
             // Calculate expiration based on duration type
-            if (planSnap.exists()) {
-                const planData = planSnap.data() as Plan;
+            if (planData) {
                 if (planData.durationType === 'months') {
                     // Use calendar months for monthly/quarterly plans
                     expiryDate.setMonth(expiryDate.getMonth() + (planData.durationValue || 1));

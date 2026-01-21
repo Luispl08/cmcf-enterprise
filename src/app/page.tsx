@@ -6,7 +6,7 @@ import { Zap, Trophy, HeartPulse, Star } from 'lucide-react';
 
 export default async function Home() {
   const plans = await GymService.getPlans();
-  const staff = await GymService.getStaff();
+  const reviews = await GymService.getReviews(4);
 
   return (
     <div className="animate-fade-in">
@@ -66,29 +66,36 @@ export default async function Home() {
       <section className="max-w-7xl mx-auto px-4 py-20 bg-noise relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-green/5 blur-3xl rounded-full pointer-events-none"></div>
         <h2 className="text-3xl md:text-5xl font-display font-bold italic text-white mb-12 uppercase text-center">
-          Atletas <span className="text-brand-green">Reales</span>
+          OPINIÓN DE <span className="text-brand-green">USUARIOS</span>
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card noPadding className="flex flex-col md:flex-row">
-            <div className="w-full md:w-1/3 bg-gray-800 min-h-[200px] md:min-h-0 bg-[url('https://images.unsplash.com/photo-1548690312-e3b507d8c110?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60')] bg-cover bg-center grayscale"></div>
-            <div className="p-8 w-full md:w-2/3">
-              <div className="flex text-brand-green mb-4">
-                <Star fill="currentColor" size={16} /><Star fill="currentColor" size={16} /><Star fill="currentColor" size={16} /><Star fill="currentColor" size={16} /><Star fill="currentColor" size={16} />
-              </div>
-              <p className="text-gray-300 italic mb-4">"CMCF cambió mi vida. No solo es el mejor box de la ciudad, es una familia que te hace indestructible."</p>
-              <p className="font-display text-white text-lg">- Sarah Connor</p>
-            </div>
-          </Card>
-          <Card noPadding className="flex flex-col md:flex-row">
-            <div className="w-full md:w-1/3 bg-gray-800 min-h-[200px] md:min-h-0 bg-[url('https://images.unsplash.com/photo-1568254183919-78a4f43a2877?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60')] bg-cover bg-center grayscale"></div>
-            <div className="p-8 w-full md:w-2/3">
-              <div className="flex text-brand-green mb-4">
-                <Star fill="currentColor" size={16} /><Star fill="currentColor" size={16} /><Star fill="currentColor" size={16} /><Star fill="currentColor" size={16} /><Star fill="currentColor" size={16} />
-              </div>
-              <p className="text-gray-300 italic mb-4">"Las instalaciones son de otro nivel. El ambiente industrial realmente te pone en modo bestia."</p>
-              <p className="font-display text-white text-lg">- John R.</p>
-            </div>
-          </Card>
+          {reviews.length > 0 ? (
+            reviews.map((review) => (
+              <Card key={review.id} noPadding className="flex flex-col md:flex-row h-full">
+                <div className="w-full md:w-1/3 bg-gray-800 min-h-[200px] md:min-h-0 relative">
+                  {review.userPhotoUrl ? (
+                    <img src={review.userPhotoUrl} alt={review.userName} className="w-full h-full object-cover grayscale" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-500 font-display text-4xl italic">
+                      {review.userName.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div className="p-8 w-full md:w-2/3 flex flex-col justify-center">
+                  <div className="flex text-brand-green mb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} fill="currentColor" size={16} className={i < review.rating ? "text-brand-green" : "text-gray-700"} />
+                    ))}
+                  </div>
+                  <p className="text-gray-300 italic mb-4">"{review.comment}"</p>
+                  <p className="font-display text-white text-lg">- {review.userName}</p>
+                  <p className="text-xs text-gray-500 mt-2">{new Date(review.date).toLocaleDateString()}</p>
+                </div>
+              </Card>
+            ))
+          ) : (
+            <p className="text-center text-gray-500 col-span-2">Aún no hay opiniones. ¡Sé el primero en comentar!</p>
+          )}
         </div>
       </section>
 

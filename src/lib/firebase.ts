@@ -29,7 +29,7 @@ import {
     runTransaction,
     collectionGroup
 } from 'firebase/firestore';
-import { UserProfile, Payment, GymClass, Plan, Staff, GymConfig } from '@/types';
+import { UserProfile, Payment, GymClass, Plan, Staff, GymConfig, Review } from '@/types';
 import { addMonths } from 'date-fns';
 
 // 1. CONFIGURATION
@@ -162,6 +162,22 @@ export class GymService {
             const q = query(usersRef, where('lastVisit', '>', 0), orderBy('lastVisit', 'desc'), limit(limitCount));
             const snap = await getDocs(q);
             return snap.docs.map(d => d.data() as UserProfile);
+        }
+        return [];
+    }
+
+    // --- REVIEWS ---
+    static async addReview(review: Omit<Review, 'id'>): Promise<void> {
+        if (isOnline && db) {
+            await addDoc(collection(db, 'reviews'), review);
+        }
+    }
+
+    static async getReviews(limitCount: number = 4): Promise<Review[]> {
+        if (isOnline && db) {
+            const q = query(collection(db, 'reviews'), where('approved', '==', true), orderBy('date', 'desc'), limit(limitCount));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data() } as Review));
         }
         return [];
     }

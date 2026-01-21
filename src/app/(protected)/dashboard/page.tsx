@@ -3,7 +3,7 @@ import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/navigation';
-import { Calendar, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Calendar, AlertTriangle, CheckCircle, Clock, Star } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { GymService } from '@/lib/firebase';
@@ -197,7 +197,104 @@ export default function DashboardPage() {
                         </div>
                     )}
                 </Card>
+
+                <ReviewCard user={user} />
             </div>
         </div>
+    );
+}
+
+function ReviewCard({ user }: { user: any }) {
+    const [rating, setRating] = useState(5);
+    const [comment, setComment] = useState('');
+    const [submitted, setSubmitted] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    // Import Star here if needed or reuse from lucide-react in parent scope
+    // But since I can't easily add top-level imports in this specific replace block without context, 
+    // I will assume Star is imported. Wait, I must Ensure Star is imported.
+    // I'll update the top level imports first in a separate replace call if needed, OR just trust I can rely on 'lucide-react' being imported.
+    // Actually, I can use the existing `lucide-react` import line if I had access to it, but I don't want to break the file.
+    // I will define the component here and update the imports in a separate step or assume it's fine if I missed it? No, I must import Star.
+    // I will assume Star is NOT imported yet (it was not in the file view).
+    // So I will make a `ReviewComponent` inside `DashboardPage` or separate.
+    // Better to include `Star` in the top imports.
+    // I'll do this in two steps: 
+    // 1. Add Star to imports. 
+    // 2. Add the component code.
+
+    // BUT I am in `ReplacementContent`. I cannot do two things here.
+    // So I will write the component here, and verify the import later. The previous ViewFile showed `CheckCircle`, `Clock`, etc. but NOT `Star`.
+    // I will use a simple text or unicode star if I can't import, but `lucide-react` is better.
+    // I will assume I will fix imports in next step.
+
+    const handleSubmit = async () => {
+        if (!comment.trim()) return;
+        setLoading(true);
+        try {
+            await GymService.addReview({
+                userId: user.uid,
+                userName: user.fullName,
+                userPhotoUrl: user.photoUrl,
+                rating,
+                comment,
+                date: Date.now(),
+                approved: true
+            });
+            setSubmitted(true);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (submitted) {
+        return (
+            <Card title="TU OPINIÓN" className="flex flex-col items-center justify-center text-center p-6 bg-brand-green/10 border-brand-green/30">
+                <div className="bg-brand-green text-black rounded-full p-2 mb-2">
+                    <CheckCircle size={24} />
+                </div>
+                <h3 className="text-white font-bold italic mb-1">¡GRACIAS!</h3>
+                <p className="text-sm text-gray-400">Tu opinión nos hace más fuertes.</p>
+            </Card>
+        );
+    }
+
+    return (
+        <Card title="DÉJANOS TU OPINIÓN">
+            <div className="flex flex-col gap-4">
+                <div className="flex justify-center gap-2 mb-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <button key={star} onClick={() => setRating(star)} type="button" className="transition-transform hover:scale-110 focus:outline-none">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill={star <= rating ? "#25D366" : "none"}
+                                stroke={star <= rating ? "#25D366" : "#4B5563"}
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-star"
+                            >
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            </svg>
+                        </button>
+                    ))}
+                </div>
+                <textarea
+                    className="w-full bg-black/50 border border-gray-700 rounded p-3 text-sm text-white placeholder-gray-500 focus:border-brand-green focus:outline-none resize-none"
+                    rows={3}
+                    placeholder="¿Qué te parece el box? (Opcional)"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                />
+                <Button onClick={handleSubmit} disabled={loading || !comment.trim()} className="w-full">
+                    {loading ? "ENVIANDO..." : "ENVIAR OPINIÓN"}
+                </Button>
+            </div>
+        </Card>
     );
 }

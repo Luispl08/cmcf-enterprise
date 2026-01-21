@@ -78,3 +78,14 @@ export interface GymConfig {
   contactPhone: string;
   contactEmail: string;
 }
+
+export interface Review {
+  id?: string;
+  userId: string;
+  userName: string; // snapshot of name at review time
+  userPhotoUrl?: string;
+  rating: number;
+  comment: string;
+  date: number; // timestamp
+  approved: boolean; // default true for now, can be moderated later
+}

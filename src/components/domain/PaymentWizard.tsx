@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import Input from '@/components/ui/Input';
 import { GymService } from '@/lib/firebase';
 import { useAppStore } from '@/lib/store';
 import { Check, Upload, ArrowLeft } from 'lucide-react';

@@ -47,7 +47,7 @@ export default function Footer() {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-white/5 text-center text-xs text-gray-600 font-mono">
-                © {new Date().getFullYear()} CMCF BOX. TODOS LOS DERECHOS RESERVADOS.
+                © {new Date().getFullYear()} CMCF FITNESS CENTER. TODOS LOS DERECHOS RESERVADOS.
             </div>
         </footer>
     );

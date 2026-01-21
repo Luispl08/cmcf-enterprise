@@ -17,7 +17,7 @@ export default function Navbar() {
                 <Link href="/" className="flex items-center group">
                     <Dumbbell className="text-brand-green h-8 w-8 group-hover:rotate-12 transition-transform" />
                     <span className="ml-2 font-display text-2xl tracking-widest text-white italic">
-                        CMCF <span className="text-brand-green">BOX</span>
+                        CMCF <span className="text-brand-green">FITNESS CENTER</span>
                     </span>
                 </Link>
 

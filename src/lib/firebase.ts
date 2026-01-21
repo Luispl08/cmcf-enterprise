@@ -23,6 +23,7 @@ import {
     serverTimestamp,
     increment,
     deleteDoc,
+    limit,
     Firestore,
     Timestamp,
     runTransaction,
@@ -153,6 +154,16 @@ export class GymService {
             };
         }
         return { activeUsers: 0, dailyVisits: 0 };
+    }
+
+    static async getRecentCheckins(limitCount: number = 5): Promise<UserProfile[]> {
+        if (isOnline && db) {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('lastVisit', '>', 0), orderBy('lastVisit', 'desc'), limit(limitCount));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => d.data() as UserProfile);
+        }
+        return [];
     }
 
     // --- DATA ---

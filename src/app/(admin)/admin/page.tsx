@@ -5,7 +5,7 @@ import { Users, Activity, TrendingUp } from 'lucide-react';
 import { GymService } from '@/lib/firebase';
 
 export default function AdminDashboard() {
-    const [stats, setStats] = useState({ activeUsers: 0 });
+    const [stats, setStats] = useState({ activeUsers: 0, dailyVisits: 0 });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -33,10 +33,10 @@ export default function AdminDashboard() {
                 />
                 <StatsCard
                     title="Asistencias Hoy"
-                    value="0"
+                    value={loading ? "..." : stats.dailyVisits.toString()}
                     icon={Activity}
-                    trend="--%"
-                    trendUp={false}
+                    trend={new Date().toLocaleDateString()}
+                    trendUp={true}
                 />
                 <StatsCard
                     title="Tasa Retención"

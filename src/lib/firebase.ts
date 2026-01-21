@@ -133,14 +133,26 @@ export class GymService {
         }
     }
 
-    static async getDashboardStats(): Promise<{ activeUsers: number }> {
+    static async getDashboardStats(): Promise<{ activeUsers: number, dailyVisits: number }> {
         if (isOnline && db) {
             const usersRef = collection(db, 'users');
-            const q = query(usersRef, where('membershipStatus', '==', 'active'));
-            const snap = await getDocs(q);
-            return { activeUsers: snap.size };
+
+            // Active Users
+            const qActive = query(usersRef, where('membershipStatus', '==', 'active'));
+            const snapActive = await getDocs(qActive);
+
+            // Daily Visits
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const qVisits = query(usersRef, where('lastVisit', '>=', todayStart.getTime()));
+            const snapVisits = await getDocs(qVisits);
+
+            return {
+                activeUsers: snapActive.size,
+                dailyVisits: snapVisits.size
+            };
         }
-        return { activeUsers: 0 };
+        return { activeUsers: 0, dailyVisits: 0 };
     }
 
     // --- DATA ---

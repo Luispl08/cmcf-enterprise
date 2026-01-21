@@ -16,9 +16,10 @@ export default function Navbar() {
                 {/* Logo */}
                 <Link href="/" className="flex items-center group">
                     <Dumbbell className="text-brand-green h-8 w-8 group-hover:rotate-12 transition-transform" />
-                    <span className="ml-2 font-display text-2xl tracking-widest text-white italic">
-                        CMCF <span className="text-brand-green">FITNESS CENTER</span>
-                    </span>
+                    <div className="ml-2 flex flex-col">
+                        <span className="font-display text-2xl tracking-widest text-white italic leading-none">CMCF</span>
+                        <span className="font-display text-[0.6rem] tracking-[0.3em] text-brand-green uppercase leading-none">FITNESS CENTER</span>
+                    </div>
                 </Link>
 
                 {/* Mobile Toggle */}

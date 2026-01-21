@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Dumbbell, Instagram } from 'lucide-react';
+import { BicepsFlexed, Instagram } from 'lucide-react';
 
 export default function Footer() {
     return (
@@ -9,10 +9,11 @@ export default function Footer() {
                 {/* Brand */}
                 <div className="col-span-1 md:col-span-2">
                     <div className="flex items-center group mb-4">
-                        <Dumbbell className="text-brand-green h-8 w-8" />
-                        <span className="ml-2 font-display text-2xl tracking-widest italic">
-                            CMCF <span className="text-brand-green">BOX</span>
-                        </span>
+                        <BicepsFlexed className="text-brand-green h-8 w-8" />
+                        <div className="ml-2 flex flex-col">
+                            <span className="font-display text-xl tracking-widest italic leading-none">CMCF</span>
+                            <span className="font-display text-[0.5rem] tracking-[0.2em] text-brand-green uppercase leading-none">FITNESS CENTER</span>
+                        </div>
                     </div>
                     <p className="text-gray-400 text-sm max-w-sm">
                         Forjando atletas de élite con entrenamiento funcional de alto rendimiento.

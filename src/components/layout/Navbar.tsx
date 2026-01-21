@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAppStore } from '@/lib/store';
-import { Dumbbell, Menu, X, User } from 'lucide-react';
+import { BicepsFlexed, Menu, X, User } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export default function Navbar() {
@@ -15,7 +15,7 @@ export default function Navbar() {
 
                 {/* Logo */}
                 <Link href="/" className="flex items-center group">
-                    <Dumbbell className="text-brand-green h-8 w-8 group-hover:rotate-12 transition-transform" />
+                    <BicepsFlexed className="text-brand-green h-8 w-8 group-hover:rotate-12 transition-transform" />
                     <div className="ml-2 flex flex-col">
                         <span className="font-display text-2xl tracking-widest text-white italic leading-none">CMCF</span>
                         <span className="font-display text-[0.6rem] tracking-[0.3em] text-brand-green uppercase leading-none">FITNESS CENTER</span>

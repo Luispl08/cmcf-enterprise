@@ -121,21 +121,27 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
                                         const isBooked = bookedClassIds.includes(c.id);
 
                                         return (
-                                            <Card key={c.id} className={`relative group overflow-hidden border-neutral-800 transition-colors ${isBooked ? 'border-brand-green/50 bg-brand-green/5' : 'hover:border-brand-green/30'}`}>
+                                            <Card key={c.id} className={`relative group overflow-hidden transition-colors 
+                                                ${c.isSpecial
+                                                    ? 'border-amber-500/50 bg-amber-900/10 hover:border-amber-500 hover:shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                                                    : isBooked
+                                                        ? 'border-brand-green/50 bg-brand-green/5'
+                                                        : 'border-neutral-800 hover:border-brand-green/30'
+                                                }`}>
 
                                                 {/* Special Badge */}
-                                                {c.isSpecial && c.date && (
-                                                    <div className="absolute top-0 right-0 bg-brand-green text-black text-[10px] font-bold px-2 py-1 rounded-bl">
-                                                        {new Date(c.date).toLocaleDateString()}
+                                                {c.isSpecial && (
+                                                    <div className="absolute top-0 right-0 bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-bl shadow-lg z-10">
+                                                        {c.date ? new Date(c.date).toLocaleDateString() : 'ESPECIAL'}
                                                     </div>
                                                 )}
 
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div>
-                                                        <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-green uppercase bg-brand-green/10 px-2 py-1 rounded mb-2">
+                                                        <span className={`inline-flex items-center gap-1 text-xs font-bold uppercase px-2 py-1 rounded mb-2 ${c.isSpecial ? 'text-amber-500 bg-amber-500/10' : 'text-brand-green bg-brand-green/10'}`}>
                                                             <Clock size={12} /> {c.time}
                                                         </span>
-                                                        <h3 className="text-xl font-bold text-white">{c.name}</h3>
+                                                        <h3 className={`text-xl font-bold ${c.isSpecial ? 'text-amber-500 italic' : 'text-white'}`}>{c.name}</h3>
                                                         <div className="flex items-center text-gray-400 text-sm mt-1">
                                                             <User size={14} className="mr-2" /> {c.coachName}
                                                         </div>
@@ -153,7 +159,7 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
                                                     {!c.isUnlimited && (
                                                         <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
                                                             <div
-                                                                className={`h-full transition-all duration-500 ${isFull ? 'bg-red-500' : 'bg-brand-green'}`}
+                                                                className={`h-full transition-all duration-500 ${isFull ? 'bg-red-500' : c.isSpecial ? 'bg-amber-500' : 'bg-brand-green'}`}
                                                                 style={{ width: `${(c.bookedCount / c.capacity) * 100}%` }}
                                                             />
                                                         </div>
@@ -163,7 +169,11 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
                                                         onClick={() => handleAction(c, isBooked)}
                                                         disabled={(!isBooked && isFull) || processingId === c.id || user?.membershipStatus !== 'active'}
                                                         variant={isBooked ? 'danger' : 'primary'}
-                                                        className={`w-full mt-4 ${isBooked ? '' : isFull ? 'bg-neutral-800 text-gray-500 cursor-not-allowed border-none' : ''}`}
+                                                        className={`w-full mt-4 
+                                                            ${isBooked ? ''
+                                                                : isFull ? 'bg-neutral-800 text-gray-500 cursor-not-allowed border-none'
+                                                                    : c.isSpecial ? 'bg-amber-500 text-black hover:bg-white hover:text-amber-600 border-none' // Custom Gold Button for Special
+                                                                        : ''}`}
                                                     >
                                                         {processingId === c.id ? (isBooked ? 'CANCELANDO...' : 'RESERVANDO...') : isBooked ? 'CANCELAR RESERVA' : isFull ? 'AGOTADO' : 'RESERVAR CUPO'}
                                                     </Button>

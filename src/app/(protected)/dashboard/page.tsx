@@ -90,7 +90,7 @@ export default function DashboardPage() {
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6 flex-wrap">
                 <div>
                     <h1 className="text-4xl font-display font-bold italic text-white mb-2">
                         HOLA, <span className="text-brand-green uppercase">{user.fullName.split(' ')[0]}</span>

@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { GymService } from '@/lib/firebase';
 import { Competition, UserProfile } from '@/types';
 import { useAppStore } from '@/lib/store';
@@ -10,13 +11,17 @@ import { Trophy, Calendar, Users, MapPin, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-export default function CompetitionsPage() {
+function CompetitionsContent() {
     const { user } = useAppStore();
     const [competitions, setCompetitions] = useState<Competition[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedComp, setSelectedComp] = useState<Competition | null>(null);
     const [teamMembers, setTeamMembers] = useState<{ name: string, cedula: string }[]>([{ name: '', cedula: '' }]);
     const [teamName, setTeamName] = useState('');
+
+    const searchParams = useSearchParams();
+    const actionParam = searchParams.get('action');
+    const idParam = searchParams.get('id');
 
     useEffect(() => {
         const load = async () => {
@@ -26,6 +31,20 @@ export default function CompetitionsPage() {
         };
         load();
     }, []);
+
+    // Auto-Join Effect
+    useEffect(() => {
+        if (user && actionParam === 'join' && idParam && competitions.length > 0 && !selectedComp) {
+            const target = competitions.find(c => c.id === idParam);
+            if (target) {
+                // Open Modal
+                setSelectedComp(target);
+                setTeamMembers(Array.from({ length: (target.teamSize || 1) - 1 }, () => ({ name: '', cedula: '' })));
+                // Optional: Clean URL
+                window.history.replaceState(null, '', '/competitions');
+            }
+        }
+    }, [user, actionParam, idParam, competitions, selectedComp]);
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -142,7 +161,8 @@ export default function CompetitionsPage() {
                                         disabled={(!comp.isUnlimited && comp.registeredCount >= comp.capacity)}
                                         onClick={() => {
                                             if (!user) {
-                                                alert('Debes iniciar sesión para inscribirte');
+                                                const returnUrl = encodeURIComponent(`/competitions?action=join&id=${comp.id}`);
+                                                window.location.href = `/login?redirect=${returnUrl}`;
                                                 return;
                                             }
                                             setSelectedComp(comp);
@@ -226,5 +246,13 @@ export default function CompetitionsPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function CompetitionsPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white">Cargando...</div>}>
+            <CompetitionsContent />
+        </Suspense>
     );
 }

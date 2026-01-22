@@ -63,12 +63,8 @@ function CompetitionsContent() {
             }
         }
 
-        if (selectedComp.isPaid) {
-            if (!paymentData.reference.trim()) {
-                alert('Por favor agrega la referencia de pago');
-                return;
-            }
-        }
+        // Legacy payment validation removed
+
 
         try {
             const membersList = [

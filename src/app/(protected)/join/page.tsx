@@ -1,12 +1,12 @@
 'use client';
 import { useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { GymService } from '@/lib/firebase';
 import { Plan } from '@/types';
 import PaymentWizard from '@/components/checkout/PaymentWizard';
 import { useAppStore } from '@/lib/store';
 
-export default function JoinPage() {
+function JoinContent() {
     const searchParams = useSearchParams();
     const planId = searchParams.get('plan');
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
@@ -47,5 +47,13 @@ export default function JoinPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function JoinPage() {
+    return (
+        <Suspense fallback={<div className="text-center py-20 text-brand-green font-display animate-pulse">CARGANDO...</div>}>
+            <JoinContent />
+        </Suspense>
     );
 }

@@ -58,7 +58,48 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Schedule (Public) */}
+      {/* Special Events Section */}
+      {classes.some(c => c.isSpecial && c.date && c.date >= Date.now() - 86400000) && (
+        <section className="py-20 bg-neutral-900 border-t border-white/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+          <div className="max-w-7xl mx-auto px-4 relative z-10">
+            <h2 className="text-3xl md:text-5xl font-display font-bold italic text-white mb-12 uppercase text-center">
+              EVENTOS <span className="text-amber-500">ESPECIALES</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {classes
+                .filter(c => c.isSpecial && c.date && c.date >= Date.now() - 86400000)
+                .sort((a, b) => (a.date || 0) - (b.date || 0))
+                .map(c => (
+                  <div key={c.id} className="bg-black/50 p-6 rounded-lg border border-amber-500/50 hover:border-amber-500 hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-all group relative">
+                    <div className="absolute top-0 right-0 bg-amber-500 text-black text-[10px] font-bold px-3 py-1 rounded-bl">
+                      {new Date(c.date!).toLocaleDateString()}
+                    </div>
+                    <div className="mb-4">
+                      <p className="text-2xl font-display italic text-white group-hover:text-amber-500 transition-colors">{c.name}</p>
+                      <p className="text-sm text-gray-400 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        {c.coachName}
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-end border-t border-white/10 pt-4">
+                      <div className="text-amber-500 font-mono text-lg bg-amber-500/10 px-3 py-1 rounded">
+                        {c.time}
+                      </div>
+                      <Link href="/classes">
+                        <Button size="sm" variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-black">
+                          RESERVAR
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Schedule (Public - Regular Only) */}
       <section className="py-24 bg-black relative border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl md:text-5xl font-display font-bold italic text-white mb-12 uppercase text-center">
@@ -67,7 +108,8 @@ export default async function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {DAYS.map(day => {
-              const dayClasses = classes.filter(c => c.day === day).sort((a, b) => a.time.localeCompare(b.time));
+              // Filter: Only Regular classes (not special)
+              const dayClasses = classes.filter(c => !c.isSpecial && c.day === day).sort((a, b) => a.time.localeCompare(b.time));
               if (dayClasses.length === 0) return null;
 
               return (

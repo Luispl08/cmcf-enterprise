@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
 import { GymService } from '@/lib/firebase';
 import { GymClass } from '@/types';
 import { useAppStore } from '@/lib/store';

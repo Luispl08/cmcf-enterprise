@@ -86,7 +86,7 @@ export default async function Home() {
                       <div className="text-amber-500 font-mono text-lg bg-amber-500/10 px-3 py-1 rounded">
                         {c.time}
                       </div>
-                      <Link href="/classes">
+                      <Link href={`/classes?action=book&id=${c.id}`}>
                         <Button size="sm" variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-black">
                           RESERVAR
                         </Button>

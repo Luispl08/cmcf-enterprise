@@ -11,6 +11,7 @@ export default function AdminPaymentsPage() {
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<'pending' | 'history'>('pending');
+    const [type, setType] = useState<'membership' | 'competition'>('membership');
 
     const [plans, setPlans] = useState<Plan[]>([]);
     const [exchangeRate, setExchangeRate] = useState<number>(0);
@@ -30,15 +31,15 @@ export default function AdminPaymentsPage() {
     const loadPayments = async () => {
         setLoading(true);
         const data = view === 'pending'
-            ? await GymService.getPendingPayments()
-            : await GymService.getAllPayments(100);
+            ? await GymService.getPendingPayments(type)
+            : await GymService.getAllPayments(100, type);
         setPayments(data);
         setLoading(false);
     };
 
     useEffect(() => {
         loadPayments();
-    }, [view]);
+    }, [view, type]);
 
     const handleAction = async (payment: Payment, action: 'approve' | 'reject') => {
         if (action === 'approve') {
@@ -112,6 +113,25 @@ export default function AdminPaymentsPage() {
                     <Button onClick={() => setShowManualPay(true)} className="bg-brand-green text-black hover:bg-brand-green/90">
                         REGISTRAR PAGO MANUAL
                     </Button>
+
+                    {/* TYPE TABS */}
+                    <div className="flex gap-2 bg-neutral-900 p-1 rounded-lg border border-gray-800">
+                        <button
+                            onClick={() => setType('membership')}
+                            className={`px-4 py-2 rounded text-sm font-bold transition-colors ${type === 'membership' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            MEMBRESÍAS
+                        </button>
+                        <button
+                            onClick={() => setType('competition')}
+                            className={`px-4 py-2 rounded text-sm font-bold transition-colors ${type === 'competition' ? 'bg-white text-black' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            COMPETENCIAS
+                        </button>
+                    </div>
+
+                    <div className="w-[1px] h-8 bg-gray-800 mx-2"></div>
+
                     <div className="flex gap-2 bg-neutral-900 p-1 rounded-lg border border-gray-800">
                         <button
                             onClick={() => setView('pending')}
@@ -243,6 +263,11 @@ export default function AdminPaymentsPage() {
                                             PARCIAL
                                         </span>
                                     )}
+                                    {(p.type === 'competition' || p.competitionId) && (
+                                        <span className="px-2 py-0.5 rounded text-xs bg-orange-900/40 text-orange-400 border border-orange-500/20 uppercase font-bold">
+                                            COMPETENCIA
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="text-sm text-gray-400">
                                     <div className="grid grid-cols-2 gap-x-8 mb-2">
@@ -255,6 +280,7 @@ export default function AdminPaymentsPage() {
                                         </p>
                                         <p>Método: <span className="text-white uppercase">{p.method === 'split' ? 'DIVIDIDO' : p.method}</span></p>
                                         <p>Fecha: {new Date(p.timestamp).toLocaleDateString()} {new Date(p.timestamp).toLocaleTimeString()}</p>
+                                        {p.description && <p className="col-span-2 text-xs text-white mt-1 italic opacity-80">{p.description}</p>}
                                     </div>
 
                                     {p.method === 'split' && p.splitDetails ? (

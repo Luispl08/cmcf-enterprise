@@ -37,6 +37,8 @@ export interface Payment {
   rejectionReason?: string;
   isPartial: boolean; // If true, only adds balance, doesn't renew membership
   planId?: string; // The plan being paid for
+  competitionId?: string; // The competition being paid for
+  type?: 'membership' | 'competition'; // To distinguish
   timestamp: number;
   feedback?: string;
   amountBs?: number;      // Calculated amount in Bolívares at payment time
@@ -123,6 +125,9 @@ export interface Competition {
   capacity: number;
   isUnlimited: boolean;
   registeredCount: number;
+  isPaid?: boolean;
+  price?: number;
+  currency?: string;
 }
 
 export interface CompetitionRegistration {
@@ -139,4 +144,6 @@ export interface CompetitionRegistration {
     userId?: string; // If matched to existing user
   }[];
   timestamp: number;
+  status: 'confirmed' | 'pending_payment';
+  paymentId?: string;
 }

@@ -237,40 +237,74 @@ export class GymService {
     }
 
     // --- SUBMIT PAYMENT ---
-    static async submitPayment(payment: Omit<Payment, 'id'>): Promise<void> {
+    static async submitPayment(payment: Omit<Payment, 'id'>): Promise<string> {
         if (isOnline && db) {
-            await addDoc(collection(db, 'payments'), payment);
+            const docRef = await addDoc(collection(db, 'payments'), payment);
 
-            // Update user status to 'pending' if it's currently inactive
-            // This ensures the UI shows "Verificando Pago"
-            const userRef = doc(db, 'users', payment.userId);
-            const userSnap = await getDoc(userRef);
-            if (userSnap.exists()) {
-                const userData = userSnap.data() as UserProfile;
-                if (userData.membershipStatus !== 'active') {
-                    await updateDoc(userRef, { membershipStatus: 'pending' });
+            // Only update membership status for MEMBERSHIP payments
+            if (payment.type !== 'competition' && !payment.competitionId) {
+                const userRef = doc(db, 'users', payment.userId);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    const userData = userSnap.data() as UserProfile;
+                    if (userData.membershipStatus !== 'active') {
+                        await updateDoc(userRef, { membershipStatus: 'pending' });
+                    }
                 }
             }
+            return docRef.id;
         } else {
             console.log("Mock Payment Submitted:", payment);
+            return "mock_payment_id";
         }
     }
 
     // --- ADMIN ---
-    static async getPendingPayments(): Promise<Payment[]> {
+    static async getPendingPayments(type?: 'membership' | 'competition'): Promise<Payment[]> {
         if (isOnline && db) {
-            const q = query(collection(db, 'payments'), where('status', 'in', ['pending', 'verification']), orderBy('timestamp', 'desc'));
+            let q = query(collection(db, 'payments'), where('status', 'in', ['pending', 'verification']), orderBy('timestamp', 'desc'));
+
+            if (type) {
+                // If type is membership, we want type=='membership' OR type==undefined (legacy)
+                // This is hard in one firebase query.
+                // Easier: Filter in memory or just query strictly if migrated.
+                // For now, let's filter in memory since pending list is usually short.
+                const snap = await getDocs(q);
+                let docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
+
+                if (type === 'competition') {
+                    docs = docs.filter(d => d.type === 'competition' || d.competitionId);
+                } else {
+                    docs = docs.filter(d => d.type !== 'competition' && !d.competitionId);
+                }
+                return docs;
+            }
+
             const snap = await getDocs(q);
             return snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
         }
         return [];
     }
 
-    static async getAllPayments(limitCount: number = 50): Promise<Payment[]> {
+    static async getAllPayments(limitCount: number = 50, type?: 'membership' | 'competition'): Promise<Payment[]> {
         if (isOnline && db) {
-            const q = query(collection(db, 'payments'), orderBy('timestamp', 'desc'), limit(limitCount));
+            // For history, we might have many. Composite index might be needed.
+            // If we filter by type, we should include it in query.
+            // But 'orderBy' requires index matches.
+            // Simplified: Fetch latest 100 and filter in memory for now.
+            const q = query(collection(db, 'payments'), orderBy('timestamp', 'desc'), limit(100)); // increased limit
             const snap = await getDocs(q);
-            return snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
+            let docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
+
+            if (type) {
+                if (type === 'competition') {
+                    docs = docs.filter(d => d.type === 'competition' || d.competitionId);
+                } else {
+                    docs = docs.filter(d => d.type !== 'competition' && !d.competitionId);
+                }
+            }
+
+            return docs.slice(0, limitCount);
         }
         return [];
     }
@@ -470,6 +504,40 @@ export class GymService {
             const compRef = doc(db, 'competitions', compId);
             const regRef = doc(collection(db, 'competitions', compId, 'registrations')); // Auto-ID
 
+            // 1. Fetch ALL existing registrations for this competition to check duplicates
+            // (Assuming reasonable scale < 1000 regs per comp)
+            const allRegsSnap = await getDocs(collection(db, 'competitions', compId, 'registrations'));
+            const existingRegs = allRegsSnap.docs.map(d => d.data() as CompetitionRegistration);
+
+            // 2. Extact all registered Cedulas and User IDs
+            const registeredCedulas = new Set<string>();
+            const registeredUserIds = new Set<string>();
+
+            existingRegs.forEach(reg => {
+                if (reg.userId) registeredUserIds.add(reg.userId);
+                if (reg.leaderCedula) registeredCedulas.add(reg.leaderCedula);
+                reg.members?.forEach(m => {
+                    if (m.cedula) registeredCedulas.add(m.cedula);
+                    if (m.userId) registeredUserIds.add(m.userId);
+                });
+            });
+
+            // 3. Check Current Request
+            // Check Leader
+            if (registeredUserIds.has(data.userId)) throw new Error("Ya estás inscrito en esta competencia.");
+            if (data.leaderCedula && registeredCedulas.has(data.leaderCedula)) throw new Error(`La cédula ${data.leaderCedula} ya está inscrita.`);
+
+            // Check Members
+            for (const member of data.members) {
+                if (member.cedula && registeredCedulas.has(member.cedula)) {
+                    throw new Error(`La cédula ${member.cedula} (${member.name}) ya está inscrita.`);
+                }
+                if (member.userId && registeredUserIds.has(member.userId)) {
+                    throw new Error(`El usuario ${member.name} ya está inscrito.`);
+                }
+            }
+
+            // 4. Transaction
             await runTransaction(db, async (transaction) => {
                 const compDoc = await transaction.get(compRef);
                 if (!compDoc.exists()) throw new Error("Competencia no encontrada");
@@ -479,17 +547,12 @@ export class GymService {
                     throw new Error("Cupos agotados");
                 }
 
-                // Check if user (leader) already registered? 
-                // We'd need to query registrations by userId, but transaction writes are tricky with queries.
-                // Ideally we use a subcollection 'registrations' and maybe key it by leader ID if one team per leader allowed.
-                // But for now let's assume specific check isn't strictly enforced in transaction to keep it simple, 
-                // or we rely on client side check + security rules later.
-
                 transaction.update(compRef, { registeredCount: increment(1) });
                 transaction.set(regRef, {
                     ...data,
                     competitionId: compId,
-                    timestamp: serverTimestamp()
+                    timestamp: serverTimestamp(),
+                    status: data.status || 'confirmed' // Default confirmed if not specified
                 });
             });
         }

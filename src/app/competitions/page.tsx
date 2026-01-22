@@ -18,6 +18,7 @@ function CompetitionsContent() {
     const [selectedComp, setSelectedComp] = useState<Competition | null>(null);
     const [teamMembers, setTeamMembers] = useState<{ name: string, cedula: string }[]>([{ name: '', cedula: '' }]);
     const [teamName, setTeamName] = useState('');
+    const [paymentData, setPaymentData] = useState<{ method: string, reference: string, amount: number }>({ method: 'pago_movil', reference: '', amount: 0 });
 
     const searchParams = useSearchParams();
     const actionParam = searchParams.get('action');
@@ -40,6 +41,10 @@ function CompetitionsContent() {
                 // Open Modal
                 setSelectedComp(target);
                 setTeamMembers(Array.from({ length: (target.teamSize || 1) - 1 }, () => ({ name: '', cedula: '' })));
+                // Set price if paid
+                if (target.isPaid && target.price) {
+                    setPaymentData(prev => ({ ...prev, amount: target.price! }));
+                }
                 // Optional: Clean URL
                 window.history.replaceState(null, '', '/competitions');
             }
@@ -50,15 +55,22 @@ function CompetitionsContent() {
         e.preventDefault();
         if (!user || !selectedComp) return;
 
-        // Basic Validation
+        // Validation
         if (selectedComp.type === 'team') {
-            if (teamMembers.length !== (selectedComp.teamSize || 0) - 1) { // Leader + members
-                // Keep it simple for now, maybe we just include leader in the input list or assume leader is user
+            const validMembers = teamMembers.filter(m => m.name.trim() !== '');
+            if (validMembers.length !== (selectedComp.teamSize || 0) - 1) {
+                // Warning logic could be here
+            }
+        }
+
+        if (selectedComp.isPaid) {
+            if (!paymentData.reference.trim()) {
+                alert('Por favor agrega la referencia de pago');
+                return;
             }
         }
 
         try {
-            // Include leader in members for backend consistency if needed, or just store leader metadata
             const membersList = [
                 { name: user.fullName, cedula: user.cedula || '', userId: user.uid },
                 ...teamMembers.filter(m => m.name.trim() !== '')
@@ -69,6 +81,27 @@ function CompetitionsContent() {
                 return;
             }
 
+            let paymentId: string | undefined;
+
+            // 1. Process Payment if Paid
+            if (selectedComp.isPaid && selectedComp.price) {
+                // Submit Payment
+                paymentId = await GymService.submitPayment({
+                    userId: user.uid,
+                    userEmail: user.email,
+                    amount: selectedComp.price,
+                    currency: selectedComp.currency || '$',
+                    method: paymentData.method as any,
+                    reference: paymentData.reference,
+                    description: `Inscripción Competencia: ${selectedComp.name}`,
+                    status: 'pending',
+                    isPartial: false,
+                    competitionId: selectedComp.id,
+                    type: 'competition',
+                    timestamp: Date.now()
+                });
+            }
+
             await GymService.registerForCompetition(selectedComp.id, {
                 userId: user.uid,
                 leaderName: user.fullName,
@@ -76,15 +109,18 @@ function CompetitionsContent() {
                 leaderPhone: user.phone,
                 competitionId: selectedComp.id,
                 teamName: teamName,
-                members: membersList
+                members: membersList,
+                status: selectedComp.isPaid ? 'pending_payment' : 'confirmed',
+                paymentId: paymentId
             });
 
-            alert('¡Inscripción exitosa!');
+            alert(selectedComp.isPaid ? '¡Registro exitoso! Tu pago está en verificación.' : '¡Inscripción exitosa!');
+
             setSelectedComp(null);
             setTeamName('');
             setTeamMembers([{ name: '', cedula: '' }]);
+            setPaymentData({ method: 'pago_movil', reference: '', amount: 0 });
 
-            // Reload to update counts
             const data = await GymService.getCompetitions();
             setCompetitions(data);
 
@@ -230,6 +266,42 @@ function CompetitionsContent() {
                                         ))}
                                     </div>
                                 </>
+                            )}
+
+                            {selectedComp.isPaid && (
+                                <div className="space-y-3 pt-4 border-t border-gray-800">
+                                    <h3 className="text-white font-bold italic">Detalles de Pago</h3>
+                                    <div className="bg-neutral-900 p-3 rounded border border-gray-800 text-sm mb-2">
+                                        <p className="text-gray-400">Total a Pagar:</p>
+                                        <p className="text-brand-green text-xl font-bold">{selectedComp.currency || '$'}{selectedComp.price}</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                            <label className="text-xs uppercase text-gray-400 font-bold">Método</label>
+                                            <select
+                                                className="w-full bg-black border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
+                                                value={paymentData.method}
+                                                onChange={e => setPaymentData({ ...paymentData, method: e.target.value })}
+                                            >
+                                                <option value="pago_movil">Pago Móvil</option>
+                                                <option value="zelle">Zelle</option>
+                                                <option value="efectivo">Efectivo</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs uppercase text-gray-400 font-bold">Referencia</label>
+                                            <Input
+                                                placeholder="1234..."
+                                                value={paymentData.reference}
+                                                onChange={e => setPaymentData({ ...paymentData, reference: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-gray-500">
+                                        * Tu inscripción quedará pendiente hasta verificar el pago.
+                                    </p>
+                                </div>
                             )}
 
                             <div className="pt-4">

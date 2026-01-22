@@ -191,7 +191,7 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
 
                                                     <Button
                                                         onClick={() => handleAction(c, isBooked)}
-                                                        disabled={(!isBooked && isFull) || processingId === c.id || user?.membershipStatus !== 'active'}
+                                                        disabled={(!isBooked && isFull) || processingId === c.id || (!!user && user.membershipStatus !== 'active')}
                                                         variant={isBooked ? 'danger' : 'primary'}
                                                         className={`w-full mt-4 
                                                             ${isBooked ? ''

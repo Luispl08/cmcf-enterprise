@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,22 +17,22 @@ const loginSchema = z.object({
     password: z.string().min(6, 'Mínimo 6 caracteres'),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginFormData = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
     const { login } = useAppStore();
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+    const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
     });
 
     const searchParams = useSearchParams();
     const redirectUrl = searchParams.get('redirect');
 
-    const onSubmit = async (data: LoginForm) => {
+    const onSubmit = async (data: LoginFormData) => {
         try {
             setError('');
             setIsLoading(true);
@@ -98,5 +98,13 @@ export default function LoginPage() {
                 </div>
             </Card>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white">Cargando...</div>}>
+            <LoginForm />
+        </Suspense>
     );
 }

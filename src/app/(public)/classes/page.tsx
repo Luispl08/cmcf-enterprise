@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { GymService } from '@/lib/firebase';
 import ClassesClient from '@/components/classes/ClassesClient';
 
@@ -7,5 +8,9 @@ export default async function ClassesPage() {
     // Server-side fetch (cached)
     const classes = await GymService.getClasses();
 
-    return <ClassesClient initialClasses={classes} />;
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white">Cargando...</div>}>
+            <ClassesClient initialClasses={classes} />
+        </Suspense>
+    );
 }

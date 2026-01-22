@@ -1,12 +1,12 @@
 'use client';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { GymService } from '@/lib/firebase';
 import { Competition, CompetitionRegistration } from '@/types';
 import PaymentWizard from '@/components/checkout/PaymentWizard';
 import { ArrowLeft } from 'lucide-react';
 
-export default function CompetitionCheckoutPage() {
+function CompetitionCheckoutContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const competitionId = searchParams.get('competitionId');
@@ -100,5 +100,13 @@ export default function CompetitionCheckoutPage() {
                 />
             </div>
         </div>
+    );
+}
+
+export default function CompetitionCheckoutPage() {
+    return (
+        <Suspense fallback={<div className="text-center py-20 text-brand-green font-display animate-pulse">CARGANDO...</div>}>
+            <CompetitionCheckoutContent />
+        </Suspense>
     );
 }

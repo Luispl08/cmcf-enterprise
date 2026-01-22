@@ -21,7 +21,10 @@ export default function AdminCompetitionsPage() {
         category: 'mixed',
         capacity: 50,
         isUnlimited: false,
-        registeredCount: 0
+        registeredCount: 0,
+        isPaid: false,
+        price: 0,
+        currency: '$'
     });
 
     const [selectedCompForView, setSelectedCompForView] = useState<Competition | null>(null);
@@ -57,7 +60,8 @@ export default function AdminCompetitionsPage() {
             });
             setIsAdding(false);
             setNewComp({
-                name: '', description: '', date: Date.now(), type: 'individual', category: 'mixed', capacity: 50, isUnlimited: false, registeredCount: 0
+                name: '', description: '', date: Date.now(), type: 'individual', category: 'mixed', capacity: 50, isUnlimited: false, registeredCount: 0,
+                isPaid: false, price: 0, currency: '$'
             });
             loadCompetitions();
         } catch (error) {
@@ -151,6 +155,43 @@ export default function AdminCompetitionsPage() {
                                     />
                                     Cupos Ilimitados
                                 </label>
+                            </div>
+
+                            {/* PAID OPTIONS */}
+                            <div className="pt-4 border-t border-gray-800">
+                                <label className="flex items-center gap-2 text-sm font-bold text-white cursor-pointer mb-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={newComp.isPaid || false}
+                                        onChange={e => setNewComp({ ...newComp, isPaid: e.target.checked })}
+                                        className="accent-brand-green w-4 h-4"
+                                    />
+                                    COMPETENCIA PAGA
+                                </label>
+
+                                {newComp.isPaid && (
+                                    <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                                        <Input
+                                            label="Precio"
+                                            type="number"
+                                            value={String(newComp.price || 0)}
+                                            onChange={e => setNewComp({ ...newComp, price: Number(e.target.value) })}
+                                            required
+                                        />
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Moneda</label>
+                                            <select
+                                                className="w-full bg-neutral-900 border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
+                                                value={newComp.currency || '$'}
+                                                onChange={e => setNewComp({ ...newComp, currency: e.target.value })}
+                                            >
+                                                <option value="$">USD ($)</option>
+                                                <option value="€">EUR (€)</option>
+                                                <option value="Bs">W (Bs)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex gap-2 mt-6">

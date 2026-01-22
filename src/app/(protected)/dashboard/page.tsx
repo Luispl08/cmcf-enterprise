@@ -169,7 +169,7 @@ export default function DashboardPage() {
                             Cargando...
                         </div>
                     ) : nextClass ? (
-                        <div className="flex flex-col h-full">
+                        <div className="flex flex-col">
                             <div className="flex-1 flex flex-col justify-center items-center text-center py-4">
                                 <span className="text-3xl font-display font-bold text-white italic mb-2">{nextClass.name}</span>
                                 <div className="flex items-center gap-2 text-brand-green text-lg font-bold bg-brand-green/10 px-3 py-1 rounded-full">

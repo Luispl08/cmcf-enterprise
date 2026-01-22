@@ -221,54 +221,9 @@ export class GymService {
         if (isOnline && db) {
             const q = query(collection(db, 'plans'), where('visible', '==', true));
             const snap = await getDocs(q);
-            if (!snap.empty) {
-                return snap.docs.map(d => ({ id: d.id, ...d.data() } as Plan));
-            }
+            return snap.docs.map(d => ({ id: d.id, ...d.data() } as Plan));
         }
-        // Fallback or Offline
-        return [
-            {
-                id: 'lite',
-                title: 'LITE: SESIÓN DIARIA',
-                price: 5,
-                currency: '$',
-                description: 'Acceso por un día',
-                visible: true,
-                durationDays: 1,
-                features: ['Acceso a Pesas', 'Válido por 24h']
-            },
-            {
-                id: 'standard',
-                title: 'STANDARD',
-                price: 20,
-                currency: '$',
-                description: 'Lunes a Viernes',
-                visible: true,
-                durationDays: 30,
-                features: ['Acceso a Pesas', 'Área de Cardio', 'Lunes a Viernes']
-            },
-            {
-                id: 'elite',
-                title: 'ELITE',
-                price: 30,
-                currency: '$',
-                description: 'Acceso Total 24/7',
-                visible: true,
-                recommended: true,
-                durationDays: 30,
-                features: ['Lunes a Domingo', 'Acceso a Clases', 'Sin Restricciones']
-            },
-            {
-                id: 'full',
-                title: 'FULL PACK',
-                price: 50,
-                currency: '$',
-                description: 'VIP + Entrenador',
-                visible: true,
-                durationDays: 30,
-                features: ['Lunes a Domingo', 'Entrenador Personal', 'Nutrición Básica', 'Toalla y Agua']
-            }
-        ];
+        return [];
     }
 
     static async getStaff(): Promise<Staff[]> {

@@ -3,6 +3,8 @@ import Card from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PlansPage() {
     const plans = await GymService.getPlans();
 

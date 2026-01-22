@@ -9,6 +9,8 @@ import { Calendar, Clock, User, Users, CheckCircle } from 'lucide-react';
 
 const DAYS = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'];
 
+export const dynamic = 'force-dynamic';
+
 export default function UserClassesPage() {
     const { user } = useAppStore();
     const [classes, setClasses] = useState<GymClass[]>([]);

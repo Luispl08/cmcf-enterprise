@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { GymService } from "@/lib/firebase";
 import { Zap, Trophy, HeartPulse, Star } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const plans = await GymService.getPlans();
   const reviews = await GymService.getReviews(4);

@@ -114,7 +114,16 @@ export default function PaymentWizard({ selectedPlan, itemData, type = 'membersh
         e.preventDefault();
         setIsLoading(true);
         try {
-            if (!user || !method) return;
+            if (!user) {
+                alert("Debes iniciar sesión para realizar el pago.");
+                setIsLoading(false);
+                return;
+            }
+            if (!method) {
+                alert("Selecciona un método de pago.");
+                setIsLoading(false);
+                return;
+            }
 
             // Fetch fresh exchange rates before processing payment
             const freshRates = await GymService.getExchangeRates();
@@ -263,9 +272,16 @@ export default function PaymentWizard({ selectedPlan, itemData, type = 'membersh
                 </div>
 
                 <div className="flex gap-4 justify-center">
-                    <Button onClick={() => router.push(type === 'competition' ? '/competitions' : '/dashboard')} size="lg" variant="primary">
-                        {type === 'competition' ? 'VOLVER A COMPETENCIAS' : 'IR AL DASHBOARD'}
+                    {/* Always offer Dashboard navigation as requested */}
+                    <Button onClick={() => router.push('/dashboard')} size="lg" variant="primary">
+                        IR AL DASHBOARD
                     </Button>
+                    {/* Optional back button if helpful, but Dashboard is priority */}
+                    {type === 'competition' && (
+                        <Button onClick={() => router.push('/competitions')} size="lg" variant="outline">
+                            VOLVER A COMPETENCIAS
+                        </Button>
+                    )}
                 </div>
             </Card>
         );

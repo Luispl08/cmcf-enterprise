@@ -89,7 +89,7 @@ export default function AdminCompetitionsPage() {
             {/* MODAL: NEW COMPETITION */}
             {isAdding && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <Card className="max-w-md w-full relative">
+                    <Card className="max-w-md w-full relative max-h-[90vh] overflow-y-auto custom-scrollbar">
                         <h2 className="text-xl font-bold text-white mb-4">Nueva Competencia</h2>
                         <form onSubmit={handleAdd} className="space-y-4">
                             <Input label="Nombre" value={newComp.name} onChange={e => setNewComp({ ...newComp, name: e.target.value })} required />

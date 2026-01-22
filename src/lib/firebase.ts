@@ -499,7 +499,7 @@ export class GymService {
         }
     }
 
-    static async registerForCompetition(compId: string, data: Omit<CompetitionRegistration, 'id' | 'timestamp'>): Promise<void> {
+    static async registerForCompetition(compId: string, data: Omit<CompetitionRegistration, 'id' | 'timestamp'>): Promise<string> {
         if (isOnline && db) {
             const compRef = doc(db, 'competitions', compId);
             const regRef = doc(collection(db, 'competitions', compId, 'registrations')); // Auto-ID
@@ -555,7 +555,10 @@ export class GymService {
                     status: data.status || 'confirmed' // Default confirmed if not specified
                 });
             });
+
+            return regRef.id;
         }
+        return '';
     }
 
     static async getUserCompetitions(uid: string): Promise<CompetitionRegistration[]> {

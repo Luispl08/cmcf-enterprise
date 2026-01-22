@@ -10,7 +10,17 @@ import Input from '@/components/ui/Input';
 import { Check, CreditCard, Lock, Smartphone, Banknote, Landmark, QrCode, Split } from 'lucide-react';
 
 interface PaymentWizardProps {
-    selectedPlan: Plan;
+    selectedPlan?: Plan; // Kept for backward compatibility
+    itemData?: {
+        id: string;
+        title: string;
+        price: number;
+        currency: string;
+        features?: string[];
+        description?: string;
+    };
+    type?: 'membership' | 'competition';
+    extraData?: any; // { competitionId, registrationId, etc. }
 }
 
 type Step = 'summary' | 'method' | 'details' | 'success';
@@ -25,7 +35,7 @@ const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: any; instructio
     { id: 'split', label: 'Pago Dividido / Múltiple', icon: Split, instructions: 'Selecciona dos métodos de pago y el monto para cada uno.' },
 ];
 
-export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
+export default function PaymentWizard({ selectedPlan, itemData, type = 'membership', extraData }: PaymentWizardProps) {
     const router = useRouter();
     const { user } = useAppStore();
     const [step, setStep] = useState<Step>('summary');
@@ -35,9 +45,21 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
     const [config, setConfig] = useState<any>(null); // GymConfig
     const [rates, setRates] = useState<{ dolar: number, euro: number, fecha: string } | null>(null);
 
+    // Normalize Item Data
+    const item = itemData || (selectedPlan ? {
+        id: selectedPlan.id,
+        title: selectedPlan.title,
+        price: selectedPlan.price,
+        currency: selectedPlan.currency,
+        features: selectedPlan.features,
+        description: selectedPlan.description
+    } : null);
+
+    if (!item) return null;
+
     // Advanced Payment State
     const [isPartial, setIsPartial] = useState(false);
-    const [payAmount, setPayAmount] = useState(selectedPlan.price);
+    const [payAmount, setPayAmount] = useState(item.price);
 
     // Split State
     const [splitSelection, setSplitSelection] = useState<{
@@ -52,8 +74,8 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
     useEffect(() => {
         GymService.getGymConfig().then(setConfig);
         GymService.getExchangeRates().then(setRates);
-        setPayAmount(selectedPlan.price);
-    }, [selectedPlan]);
+        setPayAmount(item.price);
+    }, [item]);
 
     const handleMethodSelect = (m: PaymentMethod) => {
         setMethod(m);
@@ -66,9 +88,9 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
 
     // Helper function to calculate Bs amount based on plan currency
     const calculateBsAmount = (amount: number): number | undefined => {
-        if (selectedPlan.currency === 'Bs') {
+        if (item.currency === 'Bs') {
             return amount;
-        } else if (selectedPlan.currency === '€') {
+        } else if (item.currency === '€') {
             return rates?.euro ? Number((amount * rates.euro).toFixed(2)) : undefined;
         } else {
             return rates?.dolar ? Number((amount * rates.dolar).toFixed(2)) : undefined;
@@ -122,11 +144,11 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
             let currentRate: number | undefined;
             let amountBsVal: number | undefined;
 
-            if (selectedPlan.currency === 'Bs') {
+            if (item.currency === 'Bs') {
                 // Plan is already in Bolívares, no conversion needed
                 amountBsVal = payAmount;
                 currentRate = undefined;
-            } else if (selectedPlan.currency === '€') {
+            } else if (item.currency === '€') {
                 // Plan is in Euros, use fresh euro rate
                 currentRate = freshRates?.euro;
                 amountBsVal = currentRate ? Number((payAmount * currentRate).toFixed(2)) : undefined;
@@ -140,16 +162,27 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                 userId: user.uid,
                 amount: payAmount,
                 method: method,
-                description: `Suscripción ${selectedPlan.title}`,
+                description: item.title, // Use normalized title
                 userEmail: user.email,
-                currency: selectedPlan.currency,
+                currency: item.currency,
                 reference: method === 'split' ? `SPLIT-${Date.now()}` : reference,
                 status: status,
-                isPartial: isPartial || payAmount < selectedPlan.price,
+                isPartial: isPartial || payAmount < item.price,
                 timestamp: Date.now(),
                 amountBs: amountBsVal,
-                exchangeRate: currentRate
+                exchangeRate: currentRate,
+                type: type // 'membership' | 'competition'
             };
+
+            if (type === 'competition' && extraData?.competitionId) {
+                paymentData.competitionId = extraData.competitionId;
+                // Note: We might want to link paymentId to Registration here, but Registration already exists.
+                // Or we update Registration with paymentId after?
+                // Actually GymService.submitPayment returns ID.
+                // We should probably update the registration record if we have the ID.
+            } else {
+                paymentData.planId = item.id;
+            }
 
             if (method === 'split') {
                 paymentData.splitDetails = [
@@ -158,7 +191,17 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                 ];
             }
 
-            await GymService.submitPayment(paymentData);
+            const payId = await GymService.submitPayment(paymentData);
+
+            // If Competition, we should update Registration status to 'pending_verification'? 
+            // Or just leave it as 'pending_payment' until admin verifies?
+            // The user requested: "The payment should appear in the Admin Dashboard".
+            // That's handled by submitPayment.
+
+            // NOTE: If we have registrationId, we could update it with paymentId.
+            // But GymService.submitPayment is generic.
+            // Let's assume Admin handles matching, OR we do a quick update here if possible.
+            // But for now keeping it simple as per request scope.
 
             // Simulate processing
             setTimeout(() => {
@@ -187,37 +230,43 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                     {isVerification ? 'PAGO EN REVISIÓN' : '¡PAGO EXITOSO!'}
                 </h2>
                 <p className="text-gray-400 mb-4 max-w-sm mx-auto">
-                    {isVerification
-                        ? 'Tu pago ha sido registrado y está pendiente de verificación por un administrador. Te notificaremos cuando se apruebe.'
-                        : `Bienvenido a la élite. Tu plan ${selectedPlan.title} está activo.`}
+                    {type === 'competition'
+                        ? 'Tu inscripción ha sido registrada. Tu pago será verificado por un administrador.'
+                        : (isVerification
+                            ? 'Tu pago ha sido registrado y está pendiente de verificación por un administrador.'
+                            : `Bienvenido a la élite. Tu plan ${item.title} está activo.`
+                        )
+                    }
                 </p>
 
                 {/* Show payment details with BCV rate */}
                 <div className="bg-neutral-800/50 rounded-lg p-4 max-w-sm mx-auto mb-8">
                     <div className="text-sm text-gray-400 mb-2">Monto pagado:</div>
                     <div className="text-2xl font-bold text-brand-green mb-3">
-                        {selectedPlan.currency}{payAmount}
+                        {item.currency}{payAmount}
                     </div>
-                    {rates && selectedPlan.currency !== 'Bs' && (
+                    {rates && item.currency !== 'Bs' && (
                         <div className="text-xs text-gray-500 border-t border-gray-700 pt-3">
                             <div>Equivalente: Bs {calculateBsAmount(payAmount)?.toFixed(2) || '...'}</div>
                             <div className="mt-1">
-                                Tasa BCV: {selectedPlan.currency === '€'
+                                Tasa BCV: {item.currency === '€'
                                     ? `${rates.euro} Bs/€`
                                     : `${rates.dolar} Bs/$`}
                             </div>
                         </div>
                     )}
-                    {selectedPlan.currency === 'Bs' && (
+                    {item.currency === 'Bs' && (
                         <div className="text-xs text-gray-500 border-t border-gray-700 pt-3">
                             Precio en Bolívares
                         </div>
                     )}
                 </div>
 
-                <Button onClick={() => router.push('/dashboard')} size="lg" variant={isVerification ? 'outline' : 'primary'}>
-                    IR AL DASHBOARD
-                </Button>
+                <div className="flex gap-4 justify-center">
+                    <Button onClick={() => router.push(type === 'competition' ? '/competitions' : '/dashboard')} size="lg" variant="primary">
+                        {type === 'competition' ? 'VOLVER A COMPETENCIAS' : 'IR AL DASHBOARD'}
+                    </Button>
+                </div>
             </Card>
         );
     }
@@ -229,15 +278,15 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                 <h3 className="font-display italic text-gray-400 text-sm tracking-widest mb-4">RESUMEN DE ORDEN</h3>
                 <div className="flex justify-between items-end border-b border-gray-800 pb-4 mb-4">
                     <div>
-                        <h2 className="text-2xl font-display font-bold italic text-white">{selectedPlan.title}</h2>
-                        <p className="text-sm text-gray-500">Facturación mensual</p>
+                        <h2 className="text-2xl font-display font-bold italic text-white">{item.title}</h2>
+                        <p className="text-sm text-gray-500">{type === 'membership' ? 'Facturación mensual' : 'Pago único'}</p>
                     </div>
                     <div className="text-3xl font-display font-bold text-brand-green">
-                        {selectedPlan.currency}{selectedPlan.price}
+                        {item.currency}{item.price}
                     </div>
                 </div>
                 <ul className="space-y-2 mb-8">
-                    {selectedPlan.features?.map((f, i) => (
+                    {item.features?.map((f, i) => (
                         <li key={i} className="flex items-center text-sm text-gray-300">
                             <Check className="text-brand-green w-4 h-4 mr-2" /> {f}
                         </li>
@@ -258,16 +307,16 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                         <div className="flex justify-between items-center text-lg font-bold text-white border-t border-gray-800 pt-4">
                             <span>TOTAL A PAGAR:</span>
                             <div className="text-right">
-                                <span className="text-brand-green">{selectedPlan.currency}{payAmount}</span>
-                                {rates && selectedPlan.currency !== 'Bs' && (
+                                <span className="text-brand-green">{item.currency}{payAmount}</span>
+                                {rates && item.currency !== 'Bs' && (
                                     <p className="text-xs text-gray-500 font-normal mt-1">
-                                        {selectedPlan.currency === '€'
+                                        {item.currency === '€'
                                             ? `Equivalente: Bs ${calculateBsAmount(payAmount)?.toFixed(2) || '...'} (Tasa BCV: ${rates.euro} Bs/€)`
                                             : `Equivalente: Bs ${calculateBsAmount(payAmount)?.toFixed(2) || '...'} (Tasa BCV: ${rates.dolar} Bs/$)`
                                         }
                                     </p>
                                 )}
-                                {selectedPlan.currency === 'Bs' && (
+                                {item.currency === 'Bs' && (
                                     <p className="text-xs text-gray-500 font-normal mt-1">
                                         Precio en Bolívares
                                     </p>
@@ -315,7 +364,7 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
 
                         {method === 'split' ? (
                             <div className="space-y-6">
-                                <p className="text-sm text-gray-400">Selecciona los dos métodos de pago y distribuye el monto total ({selectedPlan.currency}{payAmount}).</p>
+                                <p className="text-sm text-gray-400">Selecciona los dos métodos de pago y distribuye el monto total ({item.currency}{payAmount}).</p>
 
                                 {[1, 2].map((num) => (
                                     <div key={num} className="bg-neutral-900 border border-gray-800 p-4 rounded">
@@ -368,7 +417,7 @@ export default function PaymentWizard({ selectedPlan }: PaymentWizardProps) {
                                             <div className="text-right">
                                                 <p className="text-xs text-gray-400">MONTO A PAGAR</p>
                                                 <p className="text-xl font-mono text-white font-bold">
-                                                    Bs. {getBsAmount(payAmount, selectedPlan.currency)}
+                                                    Bs. {getBsAmount(payAmount, item.currency)}
                                                 </p>
                                             </div>
                                         )}

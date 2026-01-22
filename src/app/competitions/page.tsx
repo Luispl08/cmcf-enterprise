@@ -81,28 +81,8 @@ function CompetitionsContent() {
                 return;
             }
 
-            let paymentId: string | undefined;
-
-            // 1. Process Payment if Paid
-            if (selectedComp.isPaid && selectedComp.price) {
-                // Submit Payment
-                paymentId = await GymService.submitPayment({
-                    userId: user.uid,
-                    userEmail: user.email,
-                    amount: selectedComp.price,
-                    currency: selectedComp.currency || '$',
-                    method: paymentData.method as any,
-                    reference: paymentData.reference,
-                    description: `Inscripción Competencia: ${selectedComp.name}`,
-                    status: 'pending',
-                    isPartial: false,
-                    competitionId: selectedComp.id,
-                    type: 'competition',
-                    timestamp: Date.now()
-                });
-            }
-
-            await GymService.registerForCompetition(selectedComp.id, {
+            // 1. Register with appropriate status
+            const regId = await GymService.registerForCompetition(selectedComp.id, {
                 userId: user.uid,
                 leaderName: user.fullName,
                 leaderCedula: user.cedula,
@@ -110,16 +90,20 @@ function CompetitionsContent() {
                 competitionId: selectedComp.id,
                 teamName: teamName,
                 members: membersList,
-                status: selectedComp.isPaid ? 'pending_payment' : 'confirmed',
-                paymentId: paymentId
+                status: selectedComp.isPaid ? 'pending_payment' : 'confirmed'
             });
 
-            alert(selectedComp.isPaid ? '¡Registro exitoso! Tu pago está en verificación.' : '¡Inscripción exitosa!');
+            if (selectedComp.isPaid) {
+                // Redirect to Checkout
+                window.location.href = `/competitions/checkout?competitionId=${selectedComp.id}&regId=${regId}`;
+                return;
+            }
+
+            alert('¡Inscripción exitosa!');
 
             setSelectedComp(null);
             setTeamName('');
             setTeamMembers([{ name: '', cedula: '' }]);
-            setPaymentData({ method: 'pago_movil', reference: '', amount: 0 });
 
             const data = await GymService.getCompetitions();
             setCompetitions(data);
@@ -170,6 +154,11 @@ function CompetitionsContent() {
                                     <div className="bg-neutral-800 -mx-6 -mt-6 p-6 mb-4 flex justify-center items-center h-32 relative overflow-hidden group">
                                         <div className="absolute inset-0 bg-brand-green/10 group-hover:bg-brand-green/20 transition-colors"></div>
                                         <Trophy size={48} className="text-brand-green relative z-10 transform group-hover:scale-110 transition-transform duration-300" />
+                                        {comp.isPaid && comp.price && (
+                                            <div className="absolute top-2 right-2 bg-brand-green text-black font-bold px-2 py-1 text-xs rounded">
+                                                {comp.currency}{comp.price}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <h3 className="text-2xl font-bold font-display italic text-white mb-2">{comp.name}</h3>
@@ -269,44 +258,16 @@ function CompetitionsContent() {
                             )}
 
                             {selectedComp.isPaid && (
-                                <div className="space-y-3 pt-4 border-t border-gray-800">
-                                    <h3 className="text-white font-bold italic">Detalles de Pago</h3>
-                                    <div className="bg-neutral-900 p-3 rounded border border-gray-800 text-sm mb-2">
-                                        <p className="text-gray-400">Total a Pagar:</p>
-                                        <p className="text-brand-green text-xl font-bold">{selectedComp.currency || '$'}{selectedComp.price}</p>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="space-y-1">
-                                            <label className="text-xs uppercase text-gray-400 font-bold">Método</label>
-                                            <select
-                                                className="w-full bg-black border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
-                                                value={paymentData.method}
-                                                onChange={e => setPaymentData({ ...paymentData, method: e.target.value })}
-                                            >
-                                                <option value="pago_movil">Pago Móvil</option>
-                                                <option value="zelle">Zelle</option>
-                                                <option value="efectivo">Efectivo</option>
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-xs uppercase text-gray-400 font-bold">Referencia</label>
-                                            <Input
-                                                placeholder="1234..."
-                                                value={paymentData.reference}
-                                                onChange={e => setPaymentData({ ...paymentData, reference: e.target.value })}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                    <p className="text-[10px] text-gray-500">
-                                        * Tu inscripción quedará pendiente hasta verificar el pago.
-                                    </p>
+                                <div className="text-center py-4 border-t border-gray-800 mt-4">
+                                    <p className="text-sm text-gray-400">Esta competencia tiene un costo de inscripción:</p>
+                                    <p className="text-2xl font-bold text-brand-green my-2">{selectedComp.currency}{selectedComp.price}</p>
+                                    <p className="text-xs text-gray-500">Serás redirigido a la pasarela de pago.</p>
                                 </div>
                             )}
 
                             <div className="pt-4">
                                 <Button type="submit" className="w-full" size="lg">
-                                    COMPLETAR INSCRIPCIÓN
+                                    {selectedComp.isPaid ? 'CONTINUAR A PAGO' : 'COMPLETAR INSCRIPCIÓN'}
                                 </Button>
                                 <p className="text-center text-xs text-gray-500 mt-2">
                                     Al inscribirte aceptas las reglas de la competencia.

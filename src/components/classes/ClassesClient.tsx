@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { GymService } from '@/lib/firebase';
 import { GymClass } from '@/types';
 import { useAppStore } from '@/lib/store';
@@ -48,8 +49,31 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
         }
     }, [user?.uid]);
 
+    const searchParams = useSearchParams();
+    const actionParam = searchParams.get('action');
+    const idParam = searchParams.get('id');
+
+    // Auto-Action Effect
+    useEffect(() => {
+        if (user && actionParam === 'book' && idParam && classes.length > 0) {
+            const targetClass = classes.find(c => c.id === idParam);
+            if (targetClass) {
+                // Clear params after triggering to avoid loops? 
+                // We rely on handleAction confirmation dialog preventing loops.
+                handleAction(targetClass, bookedClassIds.includes(targetClass.id));
+                // Optional: Clean URL
+                window.history.replaceState(null, '', '/classes');
+            }
+        }
+    }, [user, actionParam, idParam, classes.length, bookedClassIds.length]);
+
     const handleAction = async (gymClass: GymClass, isBooked: boolean) => {
-        if (!user) return;
+        if (!user) {
+            const returnUrl = encodeURIComponent(`/classes?action=book&id=${gymClass.id}`);
+            window.location.href = `/login?redirect=${returnUrl}`;
+            return;
+        }
+
         if (user.membershipStatus !== 'active') {
             alert('Necesitas una membresía activa.');
             return;

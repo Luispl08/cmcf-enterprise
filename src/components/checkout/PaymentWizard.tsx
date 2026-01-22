@@ -415,10 +415,14 @@ export default function PaymentWizard({ selectedPlan, itemData, type = 'membersh
                                         <p className="text-xs text-brand-green font-bold uppercase">INSTRUCCIONES DE PAGO:</p>
                                         {['pago_movil', 'transferencia', 'efectivo'].includes(method) && rates && (
                                             <div className="text-right">
-                                                <p className="text-xs text-gray-400">MONTO A PAGAR</p>
-                                                <p className="text-xl font-mono text-white font-bold">
+                                                <p className="text-xs text-gray-400 font-bold">MONTO A PAGAR EN BOLÍVARES</p>
+                                                <p className="text-3xl font-mono text-brand-green font-bold tracking-tight">
                                                     Bs. {getBsAmount(payAmount, item.currency)}
                                                 </p>
+                                                <div className="text-xs text-gray-500 mt-1 flex flex-col items-end">
+                                                    <span>Tasa BCV: {item.currency === '€' ? rates.euro : rates.dolar} Bs/{item.currency}</span>
+                                                    <span className="opacity-75">({item.currency}{payAmount})</span>
+                                                </div>
                                             </div>
                                         )}
                                     </div>

@@ -1,6 +1,6 @@
 'use client';
 import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { GymService } from '@/lib/firebase';
 import { Competition, UserProfile } from '@/types';
 import { useAppStore } from '@/lib/store';
@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 function CompetitionsContent() {
+    const router = useRouter(); // Use Next.js router
     const { user } = useAppStore();
     const [competitions, setCompetitions] = useState<Competition[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,7 +92,7 @@ function CompetitionsContent() {
 
             if (selectedComp.isPaid) {
                 // Redirect to Checkout
-                window.location.href = `/competitions/checkout?competitionId=${selectedComp.id}&regId=${regId}`;
+                router.push(`/competitions/checkout?competitionId=${selectedComp.id}&regId=${regId}`);
                 return;
             }
 

@@ -91,16 +91,53 @@ export default function AdminClassesPage() {
                     <Card className="max-w-md w-full relative">
                         <h2 className="text-xl font-bold text-white mb-4">Nueva Clase Recurrente</h2>
                         <form onSubmit={handleAddClass} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Día</label>
-                                <select
-                                    className="w-full bg-neutral-900 border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
-                                    value={newClass.day}
-                                    onChange={e => setNewClass({ ...newClass, day: e.target.value as any })}
-                                >
-                                    {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
+                            <div className="flex items-center gap-2 mb-2 p-2 bg-brand-green/10 rounded border border-brand-green/20">
+                                <input
+                                    type="checkbox"
+                                    checked={newClass.isSpecial || false}
+                                    onChange={e => setNewClass({ ...newClass, isSpecial: e.target.checked })}
+                                    className="accent-brand-green w-4 h-4"
+                                />
+                                <span className="text-white font-bold text-sm">Clase Especial (Fecha Única)</span>
                             </div>
+
+                            {!newClass.isSpecial ? (
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Día Recurrente</label>
+                                    <select
+                                        className="w-full bg-neutral-900 border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
+                                        value={newClass.day}
+                                        onChange={e => setNewClass({ ...newClass, day: e.target.value as any })}
+                                    >
+                                        {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Fecha Específica</label>
+                                    <Input
+                                        type="date"
+                                        value={newClass.date ? new Date(newClass.date).toISOString().split('T')[0] : ''}
+                                        onChange={e => {
+                                            const date = new Date(e.target.value + 'T12:00:00'); // Midday to avoid timezone shifting
+                                            const dayIndex = date.getDay(); // 0 = Sunday
+                                            const dayMap = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+                                            setNewClass({
+                                                ...newClass,
+                                                date: date.getTime(),
+                                                day: dayMap[dayIndex] as any
+                                            });
+                                        }}
+                                        required
+                                    />
+                                    {newClass.date && (
+                                        <p className="text-brand-green text-xs mt-1">
+                                            Se agendará para el: {new Date(newClass.date).toLocaleDateString()} ({newClass.day})
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
                             <Input label="Nombre de la Clase" value={newClass.name} onChange={e => setNewClass({ ...newClass, name: e.target.value })} required placeholder="CROSSFIT" />
                             <div className="grid grid-cols-2 gap-4">
                                 <Input label="Hora" type="time" value={newClass.time} onChange={e => setNewClass({ ...newClass, time: e.target.value })} required />
@@ -195,6 +232,11 @@ export default function AdminClassesPage() {
                                             <h4 className="font-bold text-white text-lg">{c.name}</h4>
                                             <span className="flex items-center text-brand-green font-mono text-sm bg-brand-green/10 px-2 py-1 rounded">
                                                 <Clock size={12} className="mr-1" /> {c.time}
+                                                {c.isSpecial && c.date && (
+                                                    <span className="ml-2 text-xs border-l border-brand-green/30 pl-2">
+                                                        {new Date(c.date).toLocaleDateString()}
+                                                    </span>
+                                                )}
                                             </span>
                                         </div>
                                         <div className="flex items-center text-gray-400 text-sm mb-1">

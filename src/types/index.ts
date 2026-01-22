@@ -58,6 +58,8 @@ export interface GymClass {
   capacity: number;
   bookedCount: number;
   isUnlimited?: boolean;
+  isSpecial?: boolean;
+  date?: number; // Timestamp for special one-time classes
 }
 
 export interface Trainer {

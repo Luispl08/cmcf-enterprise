@@ -5,7 +5,7 @@ import { GymClass } from '@/types';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import { Calendar, Clock, User, Users, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, User, Users, CheckCircle, XCircle } from 'lucide-react';
 
 const DAYS = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'];
 
@@ -17,20 +17,19 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
     const { user } = useAppStore();
     const [classes, setClasses] = useState<GymClass[]>(initialClasses);
     const [bookedClassIds, setBookedClassIds] = useState<string[]>([]);
-    const [loading, setLoading] = useState(false); // Initial load is done by server
+    const [loading, setLoading] = useState(false);
     const [processingId, setProcessingId] = useState<string | null>(null);
 
-    // Sort initial classes by time if not already
+    // Initial sort
     useEffect(() => {
         setClasses(prev => [...prev].sort((a, b) => a.time.localeCompare(b.time)));
     }, []);
 
     const refreshData = async () => {
-        // Only fetch needed data
         setLoading(true);
         try {
             const [data, booked] = await Promise.all([
-                GymService.getClasses(), // We fetch fresh data on explicit refresh (e.g. after booking)
+                GymService.getClasses(),
                 user ? GymService.getUserBookings(user.uid) : Promise.resolve([])
             ]);
             setClasses(data.sort((a, b) => a.time.localeCompare(b.time)));
@@ -42,29 +41,35 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
         }
     };
 
-    // On mount/user change, only fetch bookings! Don't re-fetch classes if we have initialClasses.
     useEffect(() => {
         if (user?.uid) {
             GymService.getUserBookings(user.uid).then(setBookedClassIds);
         }
     }, [user?.uid]);
 
-    const handleBook = async (gymClass: GymClass) => {
+    const handleAction = async (gymClass: GymClass, isBooked: boolean) => {
         if (!user) return;
         if (user.membershipStatus !== 'active') {
-            alert('Necesitas una membresía activa para inscribirte.');
+            alert('Necesitas una membresía activa.');
             return;
         }
 
-        if (!confirm(`¿Confirmar reserva para ${gymClass.name} a las ${gymClass.time}?`)) return;
-
         setProcessingId(gymClass.id);
         try {
-            await GymService.bookClass(gymClass.id, user);
-            alert('¡Reserva exitosa!');
-            refreshData(); // Refresh to update counts
+            if (isBooked) {
+                // Cancel
+                if (!confirm(`¿Anular inscripción a ${gymClass.name}?`)) return;
+                await GymService.cancelBooking(gymClass.id, user.uid);
+                alert('Incripción anulada.');
+            } else {
+                // Book
+                if (!confirm(`¿Reservar cupo para ${gymClass.name} a las ${gymClass.time}?`)) return;
+                await GymService.bookClass(gymClass.id, user);
+                alert('¡Reserva exitosa!');
+            }
+            refreshData();
         } catch (error: any) {
-            alert(error.message || 'Error al reservar. Puede que ya estés inscrito o la clase esté llena.');
+            alert(error.message || 'Error al procesar solicitud.');
         } finally {
             setProcessingId(null);
         }
@@ -84,7 +89,23 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
             ) : (
                 <div className="space-y-12">
                     {DAYS.map(day => {
-                        const dayClasses = classes.filter(c => c.day === day);
+                        // Filter logic:
+                        // 1. Match Day
+                        // 2. If Special: Date must be NOT expired (e.g., show if date >= today - 1 day to allow checking yesterday? No, strictly future or today).
+                        // Let's hide if date < Today Start.
+
+                        const dayClasses = classes.filter(c => {
+                            if (c.day !== day) return false;
+
+                            if (c.isSpecial && c.date) {
+                                // Auto-hide expired special classes (older than yesterday)
+                                const yesterday = new Date();
+                                yesterday.setDate(yesterday.getDate() - 1);
+                                if (c.date < yesterday.getTime()) return false;
+                            }
+                            return true;
+                        });
+
                         if (dayClasses.length === 0) return null;
 
                         return (
@@ -101,6 +122,14 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
 
                                         return (
                                             <Card key={c.id} className={`relative group overflow-hidden border-neutral-800 transition-colors ${isBooked ? 'border-brand-green/50 bg-brand-green/5' : 'hover:border-brand-green/30'}`}>
+
+                                                {/* Special Badge */}
+                                                {c.isSpecial && c.date && (
+                                                    <div className="absolute top-0 right-0 bg-brand-green text-black text-[10px] font-bold px-2 py-1 rounded-bl">
+                                                        {new Date(c.date).toLocaleDateString()}
+                                                    </div>
+                                                )}
+
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div>
                                                         <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-green uppercase bg-brand-green/10 px-2 py-1 rounded mb-2">
@@ -131,11 +160,12 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
                                                     )}
 
                                                     <Button
-                                                        onClick={() => handleBook(c)}
-                                                        disabled={isFull || isBooked || processingId === c.id || user?.membershipStatus !== 'active'}
-                                                        className={`w-full mt-4 ${isBooked ? 'bg-brand-green/20 text-brand-green border-brand-green/50 hover:bg-brand-green/30' : isFull ? 'bg-neutral-800 text-gray-500 cursor-not-allowed border-none' : ''}`}
+                                                        onClick={() => handleAction(c, isBooked)}
+                                                        disabled={(!isBooked && isFull) || processingId === c.id || user?.membershipStatus !== 'active'}
+                                                        variant={isBooked ? 'danger' : 'primary'}
+                                                        className={`w-full mt-4 ${isBooked ? '' : isFull ? 'bg-neutral-800 text-gray-500 cursor-not-allowed border-none' : ''}`}
                                                     >
-                                                        {processingId === c.id ? 'RESERVANDO...' : isBooked ? 'YA INSCRITO' : isFull ? 'AGOTADO' : 'RESERVAR CUPO'}
+                                                        {processingId === c.id ? (isBooked ? 'CANCELANDO...' : 'RESERVANDO...') : isBooked ? 'CANCELAR RESERVA' : isFull ? 'AGOTADO' : 'RESERVAR CUPO'}
                                                     </Button>
                                                 </div>
                                             </Card>

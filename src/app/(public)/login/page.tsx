@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,6 +29,9 @@ export default function LoginPage() {
         resolver: zodResolver(loginSchema),
     });
 
+    const searchParams = useSearchParams();
+    const redirectUrl = searchParams.get('redirect');
+
     const onSubmit = async (data: LoginForm) => {
         try {
             setError('');
@@ -36,7 +39,9 @@ export default function LoginPage() {
             const user = await GymService.login(data.email, data.password);
             login(user);
 
-            if (user.role === 'admin') {
+            if (redirectUrl) {
+                router.push(redirectUrl);
+            } else if (user.role === 'admin') {
                 router.push('/admin');
             } else {
                 router.push('/dashboard');

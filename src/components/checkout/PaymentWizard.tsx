@@ -175,7 +175,7 @@ export default function PaymentWizard({ selectedPlan, itemData, type = 'membersh
                 description: item.title, // Use normalized title
                 userEmail: user.email,
                 currency: item.currency,
-                reference: method === 'split' ? `SPLIT-${Date.now()}` : reference,
+                reference: method === 'split' ? `SPLIT-${Date.now()}` : (method === 'efectivo' ? `CASH-${Date.now()}` : reference),
                 status: status,
                 isPartial: isPartial || payAmount < item.price,
                 timestamp: Date.now(),
@@ -413,12 +413,14 @@ export default function PaymentWizard({ selectedPlan, itemData, type = 'membersh
                                                     value={splitSelection[`amount${num}` as 'amount1' | 'amount2']}
                                                     onChange={(e) => setSplitSelection({ ...splitSelection, [`amount${num}`]: Number(e.target.value) })}
                                                 />
-                                                <Input
-                                                    label="Referencia"
-                                                    placeholder="Ref/Comp"
-                                                    value={splitSelection[`ref${num}` as 'ref1' | 'ref2']}
-                                                    onChange={(e) => setSplitSelection({ ...splitSelection, [`ref${num}`]: e.target.value })}
-                                                />
+                                                {splitSelection[`method${num}` as 'method1' | 'method2'] !== 'efectivo' && (
+                                                    <Input
+                                                        label="Referencia"
+                                                        placeholder="Ref/Comp"
+                                                        value={splitSelection[`ref${num}` as 'ref1' | 'ref2']}
+                                                        onChange={(e) => setSplitSelection({ ...splitSelection, [`ref${num}`]: e.target.value })}
+                                                    />
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -459,16 +461,20 @@ export default function PaymentWizard({ selectedPlan, itemData, type = 'membersh
                                     </>
                                 ) : (
                                     <>
-                                        <Input
-                                            label="NÚMERO DE REFERENCIA / COMPROBANTE"
-                                            placeholder="Ej. 12345678"
-                                            required
-                                            value={reference}
-                                            onChange={(e) => setReference(e.target.value)}
-                                        />
-                                        <p className="text-xs text-gray-500">
-                                            Por favor ingresa el número de confirmación de tu transacción para que podamos verificarla.
-                                        </p>
+                                        {method !== 'efectivo' && (
+                                            <>
+                                                <Input
+                                                    label="NÚMERO DE REFERENCIA / COMPROBANTE"
+                                                    placeholder="Ej. 12345678"
+                                                    required
+                                                    value={reference}
+                                                    onChange={(e) => setReference(e.target.value)}
+                                                />
+                                                <p className="text-xs text-gray-500">
+                                                    Por favor ingresa el número de confirmación de tu transacción para que podamos verificarla.
+                                                </p>
+                                            </>
+                                        )}
                                     </>
                                 )}
                             </>

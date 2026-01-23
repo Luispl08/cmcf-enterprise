@@ -34,26 +34,26 @@ export default async function Home() {
       </div>
 
       {/* Features */}
-      <section className="bg-neutral-900 py-24 border-y border-white/5">
-        <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl md:text-5xl font-display font-bold italic text-white mb-16 uppercase text-center relative z-10">
+      <section className="bg-neutral-900 py-12 border-y border-white/5">
+        <div className="max-w-5xl mx-auto px-4">
+          <h2 className="text-2xl md:text-4xl font-display font-bold italic text-white mb-8 uppercase text-center relative z-10">
             ¿Por qué <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-green to-white">CMCF</span>?
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="hover:-translate-y-2 transition-transform duration-300">
-              <Zap className="text-brand-green w-12 h-12 mb-4" />
-              <h3 className="text-xl font-display italic text-white mb-2">Entrenamiento Híbrido</h3>
-              <p className="text-gray-400">Combina lo mejor del CrossFit con culturismo funcional para resultados reales.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="hover:-translate-y-2 transition-transform duration-300 p-4">
+              <Zap className="text-brand-green w-8 h-8 mb-2" />
+              <h3 className="text-lg font-display italic text-white mb-1">Entrenamiento Híbrido</h3>
+              <p className="text-gray-400 text-sm">Combina lo mejor del CrossFit con culturismo funcional para resultados reales.</p>
             </Card>
-            <Card className="hover:-translate-y-2 transition-transform duration-300">
-              <Trophy className="text-brand-green w-12 h-12 mb-4" />
-              <h3 className="text-xl font-display italic text-white mb-2">Comunidad Élite</h3>
-              <p className="text-gray-400">Entrena con personas que te empujan a superar tus propios límites cada día.</p>
+            <Card className="hover:-translate-y-2 transition-transform duration-300 p-4">
+              <Trophy className="text-brand-green w-8 h-8 mb-2" />
+              <h3 className="text-lg font-display italic text-white mb-1">Comunidad Élite</h3>
+              <p className="text-gray-400 text-sm">Entrena con personas que te empujan a superar tus propios límites cada día.</p>
             </Card>
-            <Card className="hover:-translate-y-2 transition-transform duration-300">
-              <HeartPulse className="text-brand-green w-12 h-12 mb-4" />
-              <h3 className="text-xl font-display italic text-white mb-2">Seguimiento Biométrico</h3>
-              <p className="text-gray-400">Tecnología de última generación para monitorear tu progreso y vitales.</p>
+            <Card className="hover:-translate-y-2 transition-transform duration-300 p-4">
+              <HeartPulse className="text-brand-green w-8 h-8 mb-2" />
+              <h3 className="text-lg font-display italic text-white mb-1">Seguimiento Biométrico</h3>
+              <p className="text-gray-400 text-sm">Tecnología de última generación para monitorear tu progreso y vitales.</p>
             </Card>
           </div>
         </div>

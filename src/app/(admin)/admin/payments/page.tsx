@@ -13,6 +13,19 @@ export default function AdminPaymentsPage() {
     const [view, setView] = useState<'pending' | 'history'>('pending');
     const [type, setType] = useState<'membership' | 'competition'>('membership');
 
+    // Action Modal State
+    const [actionModal, setActionModal] = useState<{
+        isOpen: boolean;
+        payment: Payment | null;
+        action: 'approve' | 'reject';
+        feedback: string;
+    }>({
+        isOpen: false,
+        payment: null,
+        action: 'approve',
+        feedback: ''
+    });
+
     const [plans, setPlans] = useState<Plan[]>([]);
     const [exchangeRate, setExchangeRate] = useState<number>(0);
 
@@ -41,46 +54,37 @@ export default function AdminPaymentsPage() {
         loadPayments();
     }, [view, type]);
 
-    const handleAction = async (payment: Payment, action: 'approve' | 'reject') => {
-        if (action === 'approve') {
-            if (!confirm(`¿Aprobar pago de ${payment.currency}${payment.amount}?`)) return;
+    const openActionModal = (payment: Payment, action: 'approve' | 'reject') => {
+        setActionModal({
+            isOpen: true,
+            payment,
+            action,
+            feedback: action === 'reject' ? 'Comprobante ilegible / Monto incorrecto' : ''
+        });
+    };
 
-            try {
+    const processAction = async () => {
+        const { payment, action, feedback } = actionModal;
+        if (!payment) return;
+
+        try {
+            if (action === 'approve') {
                 await GymService.approvePayment(payment.id, payment.userId);
-                alert('Pago aprobado y membresía actualizada.');
-            } catch (error) {
-                console.error('Error al aprobar pago:', error);
-                alert('Error al aprobar pago.');
-                return; // Don't reload if approval failed
-            }
-
-            // Try to reload, but don't show error if this fails
-            try {
-                await loadPayments();
-            } catch (error) {
-                console.error('Error al recargar pagos (pero el pago fue aprobado):', error);
-                // Silently fail - the payment was approved successfully
-            }
-        } else {
-            // Reject Flow
-            const feedback = prompt('Por favor ingresa el motivo del rechazo:', 'Comprobante ilegible / Monto incorrecto');
-            if (feedback === null) return; // Cancelled
-
-            try {
+                alert('Pago aprobado y procesado exitosamente.');
+            } else {
+                if (!feedback.trim()) {
+                    alert('Por favor ingresa el motivo del rechazo.');
+                    return;
+                }
                 await GymService.updatePaymentStatus(payment.id, 'rejected', feedback);
-                alert('Pago rechazado.');
-            } catch (error) {
-                console.error('Error al rechazar pago:', error);
-                alert('Error al rechazar pago.');
-                return;
+                alert('Pago rechazado correctamente.');
             }
 
-            // Try to reload, but don't show error if this fails
-            try {
-                await loadPayments();
-            } catch (error) {
-                console.error('Error al recargar pagos (pero el pago fue rechazado):', error);
-            }
+            setActionModal({ ...actionModal, isOpen: false });
+            await loadPayments();
+        } catch (error) {
+            console.error(`Error al ${action === 'approve' ? 'aprobar' : 'rechazar'} pago:`, error);
+            alert(`Error: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
 
@@ -242,6 +246,59 @@ export default function AdminPaymentsPage() {
                 </div>
             )}
 
+            {/* ACTION MODAL */}
+            {actionModal.isOpen && actionModal.payment && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-neutral-900 border border-gray-800 rounded-lg max-w-md w-full p-6 shadow-2xl">
+                        <h3 className="text-xl font-bold text-white mb-4">
+                            {actionModal.action === 'approve' ? '¿Aprobar Pago?' : 'Rechazar Pago'}
+                        </h3>
+
+                        <div className="mb-6">
+                            <p className="text-gray-300 text-sm mb-2">
+                                Usuario: <span className="font-bold text-white">{actionModal.payment.userEmail}</span>
+                            </p>
+                            <p className="text-gray-300 text-sm mb-4">
+                                Monto: <span className="font-bold text-brand-green">{actionModal.payment.currency}{actionModal.payment.amount}</span>
+                            </p>
+
+                            {actionModal.action === 'reject' && (
+                                <div>
+                                    <label className="block text-xs font-bold text-red-400 uppercase mb-2">Motivo del rechazo</label>
+                                    <textarea
+                                        className="w-full bg-black border border-gray-700 text-white p-3 rounded focus:border-red-500 outline-none h-24 resize-none"
+                                        value={actionModal.feedback}
+                                        onChange={e => setActionModal({ ...actionModal, feedback: e.target.value })}
+                                        placeholder="Describe por qué se rechaza el pago..."
+                                    />
+                                </div>
+                            )}
+
+                            {actionModal.action === 'approve' && (
+                                <p className="text-sm text-gray-400 italic">
+                                    Al aprobar, se {actionModal.payment.type === 'competition' || actionModal.payment.competitionId ? 'confirmará la inscripción en la competencia' : 'activará la membresía del usuario'} automáticamente.
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="flex gap-3 justify-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => setActionModal({ ...actionModal, isOpen: false })}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                className={actionModal.action === 'approve' ? 'bg-green-600 hover:bg-green-500 text-white' : 'bg-red-600 hover:bg-red-500 text-white'}
+                                onClick={processAction}
+                            >
+                                {actionModal.action === 'approve' ? 'CONFIRMAR APROBACIÓN' : 'CONFIRMAR RECHAZO'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="space-y-4">
                 {loading ? <p className="text-gray-500">Cargando...</p> : payments.length === 0 ? (
                     <p className="text-gray-500">No se encontraron pagos en esta sección.</p>
@@ -305,13 +362,13 @@ export default function AdminPaymentsPage() {
                                 <div className="flex gap-2">
                                     <Button
                                         className="bg-green-600 hover:bg-green-500 text-white border-none"
-                                        onClick={() => handleAction(p, 'approve')}
+                                        onClick={() => openActionModal(p, 'approve')}
                                     >
                                         <Check className="w-4 h-4 mr-2" /> APROBAR
                                     </Button>
                                     <Button
                                         className="bg-red-900/50 hover:bg-red-900 text-red-200 border-red-800"
-                                        onClick={() => handleAction(p, 'reject')}
+                                        onClick={() => openActionModal(p, 'reject')}
                                     >
                                         <X className="w-4 h-4 mr-2" /> RECHAZAR
                                     </Button>

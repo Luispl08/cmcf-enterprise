@@ -329,15 +329,41 @@ export class GymService {
             });
 
             // 2. Sync Rejection to User Profile
+            // ONLY if it is NOT a competition payment
             if (status === 'rejected') {
                 const pSnap = await getDoc(paymentRef);
                 if (pSnap.exists()) {
                     const pData = pSnap.data() as Payment;
+
+                    // Skip membership update for competition payments
+                    if (pData.type === 'competition' || pData.competitionId) {
+                        return;
+                    }
+
                     const userRef = doc(db, 'users', pData.userId);
-                    await updateDoc(userRef, {
-                        membershipStatus: 'rejected',
-                        rejectionFeedback: feedback || 'Pago rechazado. Por favor contacte a soporte.'
-                    });
+
+                    // Check if User is currently active
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        const userData = userSnap.data() as UserProfile;
+                        const isCurrentlyActive = userData.membershipStatus === 'active' &&
+                            (userData.membershipExpiry || 0) > Date.now();
+
+                        // Only set to 'rejected' if NOT active (or expired)
+                        if (!isCurrentlyActive) {
+                            await updateDoc(userRef, {
+                                membershipStatus: 'rejected',
+                                rejectionFeedback: feedback || 'Pago rechazado. Por favor contacte a soporte.'
+                            });
+                        } else {
+                            // If active, we might just want to notify them without changing status
+                            // For now, we update 'rejectionFeedback' so they see a message, 
+                            // BUT we keep status 'active'
+                            await updateDoc(userRef, {
+                                rejectionFeedback: feedback || 'Su último pago fue rechazado, pero su membresía actual sigue activa.'
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -678,7 +704,7 @@ export class GymService {
         }
     }
 
-    // ... HELPERS ...
+    // --- HELPERS ---
 
     static async approvePayment(paymentId: string, userId: string): Promise<void> {
         if (isOnline && db) {
@@ -699,7 +725,41 @@ export class GymService {
                 feedback: null
             });
 
-            // 3. Calculate New Expiry
+            // 2b. CHECK IF COMPETITION PAYMENT
+            // If it is a competition payment, we ONLY update the registration status
+            // We DO NOT update the user's membership expiry.
+            // 2b. CHECK IF COMPETITION PAYMENT
+            // If it is a competition payment, we ONLY update the registration status
+            // We DO NOT update the user's membership expiry.
+            if (pData.type === 'competition' || pData.competitionId) {
+                if (pData.competitionId) {
+                    try {
+                        const q = query(
+                            collection(db, 'competitions', pData.competitionId, 'registrations'),
+                            where('userId', '==', userId)
+                        );
+                        const snap = await getDocs(q);
+
+                        if (!snap.empty) {
+                            // Confirm all matching registrations (usually just one leader reg)
+                            // Or just the one that matches.
+                            for (const d of snap.docs) {
+                                await updateDoc(d.ref, { status: 'confirmed' });
+                            }
+                        } else {
+                            console.warn(`No registration found for user ${userId} in competition ${pData.competitionId}`);
+                        }
+                    } catch (err) {
+                        console.error("Error updating competition registration status:", err);
+                        // Do not throw, so the payment status remains approved
+                    }
+                } else {
+                    console.warn("Competition payment approved but missing competitionId:", pData);
+                }
+                return; // EXIT EARLY - DO NOT RENEW MEMBERSHIP
+            }
+
+            // 3. Calculate New Expiry (ONLY FOR MEMBERSHIPS)
             const userRef = doc(db, 'users', userId);
             const userSnap = await getDoc(userRef);
 

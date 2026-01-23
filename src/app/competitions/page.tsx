@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { GymService } from '@/lib/firebase';
-import { Competition, UserProfile } from '@/types';
+import { Competition, UserProfile, CompetitionRegistration } from '@/types';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -15,6 +15,7 @@ function CompetitionsContent() {
     const router = useRouter(); // Use Next.js router
     const { user } = useAppStore();
     const [competitions, setCompetitions] = useState<Competition[]>([]);
+    const [userRegistrations, setUserRegistrations] = useState<CompetitionRegistration[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedComp, setSelectedComp] = useState<Competition | null>(null);
     const [teamMembers, setTeamMembers] = useState<{ name: string, cedula: string }[]>([{ name: '', cedula: '' }]);
@@ -29,10 +30,16 @@ function CompetitionsContent() {
         const load = async () => {
             const data = await GymService.getCompetitions();
             setCompetitions(data);
+
+            if (user) {
+                const regs = await GymService.getUserCompetitions(user.uid);
+                setUserRegistrations(regs);
+            }
+
             setLoading(false);
         };
         load();
-    }, []);
+    }, [user]);
 
     // Auto-Join Effect
     useEffect(() => {
@@ -146,55 +153,78 @@ function CompetitionsContent() {
                                 <p className="text-gray-500">No hay competencias programadas pronto.</p>
                             </div>
                         ) : (
-                            competitions.map(comp => (
-                                <Card key={comp.id} className="flex flex-col h-full hover:border-brand-green/50 transition-colors">
-                                    <div className="bg-neutral-800 -mx-6 -mt-6 p-6 mb-4 flex justify-center items-center h-32 relative overflow-hidden group">
-                                        <div className="absolute inset-0 bg-brand-green/10 group-hover:bg-brand-green/20 transition-colors"></div>
-                                        <Trophy size={48} className="text-brand-green relative z-10 transform group-hover:scale-110 transition-transform duration-300" />
-                                        {comp.isPaid && comp.price && (
-                                            <div className="absolute top-2 right-2 bg-brand-green text-black font-bold px-2 py-1 text-xs rounded">
-                                                {comp.currency}{comp.price}
+                            competitions.map(comp => {
+                                const userReg = userRegistrations.find(r => r.competitionId === comp.id);
+                                const isPendingPayment = userReg?.status === 'pending_payment';
+                                const isRegistered = !!userReg;
+
+                                return (
+                                    <Card key={comp.id} className="flex flex-col h-full hover:border-brand-green/50 transition-colors">
+                                        <div className="bg-neutral-800 -mx-6 -mt-6 p-6 mb-4 flex justify-center items-center h-32 relative overflow-hidden group">
+                                            <div className="absolute inset-0 bg-brand-green/10 group-hover:bg-brand-green/20 transition-colors"></div>
+                                            <Trophy size={48} className="text-brand-green relative z-10 transform group-hover:scale-110 transition-transform duration-300" />
+                                            {comp.isPaid && comp.price && (
+                                                <div className="absolute top-2 right-2 bg-brand-green text-black font-bold px-2 py-1 text-xs rounded">
+                                                    {comp.currency}{comp.price}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <h3 className="text-2xl font-bold font-display italic text-white mb-2">{comp.name}</h3>
+                                        <div className="space-y-2 text-sm text-gray-400 mb-6 flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar size={16} className="text-brand-green" />
+                                                {format(comp.date, "EEEE d 'de' MMMM", { locale: es }).toUpperCase()}
                                             </div>
-                                        )}
-                                    </div>
+                                            <div className="flex items-center gap-2">
+                                                <Users size={16} className="text-brand-green" />
+                                                <span className="capitalize">{comp.type}</span>
+                                                {comp.type === 'team' && ` (${comp.teamSize} pers.)`}
+                                                <span className="px-1">•</span> <span className="capitalize">{comp.category}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${comp.registeredCount >= comp.capacity && !comp.isUnlimited ? 'bg-red-500' : 'bg-green-500'}`} />
+                                                {comp.isUnlimited ? 'Cupos Ilimitados' :
+                                                    comp.registeredCount >= comp.capacity ? 'AGOTADO' :
+                                                        `${comp.capacity - comp.registeredCount} cupos disponibles`}
+                                            </div>
+                                            {isRegistered && (
+                                                <div className="mt-2 text-brand-green font-bold text-sm uppercase">
+                                                    Estado: {userReg?.status === 'pending_payment' ? 'Pago Pendiente' : 'Inscrito'}
+                                                </div>
+                                            )}
+                                        </div>
 
-                                    <h3 className="text-2xl font-bold font-display italic text-white mb-2">{comp.name}</h3>
-                                    <div className="space-y-2 text-sm text-gray-400 mb-6 flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <Calendar size={16} className="text-brand-green" />
-                                            {format(comp.date, "EEEE d 'de' MMMM", { locale: es }).toUpperCase()}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Users size={16} className="text-brand-green" />
-                                            <span className="capitalize">{comp.type}</span>
-                                            {comp.type === 'team' && ` (${comp.teamSize} pers.)`}
-                                            <span className="px-1">•</span> <span className="capitalize">{comp.category}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${comp.registeredCount >= comp.capacity && !comp.isUnlimited ? 'bg-red-500' : 'bg-green-500'}`} />
-                                            {comp.isUnlimited ? 'Cupos Ilimitados' :
-                                                comp.registeredCount >= comp.capacity ? 'AGOTADO' :
-                                                    `${comp.capacity - comp.registeredCount} cupos disponibles`}
-                                        </div>
-                                    </div>
+                                        <Button
+                                            className="w-full"
+                                            disabled={(!comp.isUnlimited && comp.registeredCount >= comp.capacity && !isRegistered) || (isRegistered && !isPendingPayment)}
+                                            onClick={() => {
+                                                if (!user) {
+                                                    const returnUrl = encodeURIComponent(`/competitions?action=join&id=${comp.id}`);
+                                                    window.location.href = `/login?redirect=${returnUrl}`;
+                                                    return;
+                                                }
 
-                                    <Button
-                                        className="w-full"
-                                        disabled={(!comp.isUnlimited && comp.registeredCount >= comp.capacity)}
-                                        onClick={() => {
-                                            if (!user) {
-                                                const returnUrl = encodeURIComponent(`/competitions?action=join&id=${comp.id}`);
-                                                window.location.href = `/login?redirect=${returnUrl}`;
-                                                return;
-                                            }
-                                            setSelectedComp(comp);
-                                            setTeamMembers(Array.from({ length: (comp.teamSize || 1) - 1 }, () => ({ name: '', cedula: '' })));
-                                        }}
-                                    >
-                                        {(!comp.isUnlimited && comp.registeredCount >= comp.capacity) ? 'SOLD OUT' : 'INSCRIBIRSE'}
-                                    </Button>
-                                </Card>
-                            ))
+                                                if (isPendingPayment && userReg) {
+                                                    // Resume Payment
+                                                    router.push(`/competitions/checkout?competitionId=${comp.id}&regId=${userReg.id}`);
+                                                    return;
+                                                }
+
+                                                if (isRegistered) return; // Should be disabled
+
+                                                setSelectedComp(comp);
+                                                setTeamMembers(Array.from({ length: (comp.teamSize || 1) - 1 }, () => ({ name: '', cedula: '' })));
+                                            }}
+                                            variant={isPendingPayment ? 'outline' : 'primary'}
+                                        >
+                                            {isPendingPayment ? 'PAGAR INSCRIPCIÓN' :
+                                                isRegistered ? 'YA INSCRITO' :
+                                                    (!comp.isUnlimited && comp.registeredCount >= comp.capacity) ? 'SOLD OUT' : 'INSCRIBIRSE'}
+                                        </Button>
+                                    </Card>
+                                )
+                            })
                         )}
                     </div>
                 )}

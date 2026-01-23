@@ -8,6 +8,7 @@ import Input from '@/components/ui/Input';
 import Card from '@/components/ui/Card';
 
 const DAYS = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'];
+import { formatTime12h } from '@/lib/utils';
 
 // ... (previous imports)
 
@@ -179,7 +180,7 @@ export default function AdminClassesPage() {
                         <div className="flex justify-between items-center mb-6">
                             <div>
                                 <h2 className="text-xl font-bold text-white">Asistentes</h2>
-                                <p className="text-brand-green">{viewingClass.name} - {viewingClass.day} {viewingClass.time}</p>
+                                <p className="text-brand-green">{viewingClass.name} - {viewingClass.day} {formatTime12h(viewingClass.time)}</p>
                             </div>
                             <button onClick={() => setViewingClass(null)} className="text-gray-500 hover:text-white"><X size={24} /></button>
                         </div>
@@ -231,7 +232,7 @@ export default function AdminClassesPage() {
                                         <div className="flex justify-between items-start mb-2 pr-6">
                                             <h4 className="font-bold text-white text-lg">{c.name}</h4>
                                             <span className="flex items-center text-brand-green font-mono text-sm bg-brand-green/10 px-2 py-1 rounded">
-                                                <Clock size={12} className="mr-1" /> {c.time}
+                                                <Clock size={12} className="mr-1" /> {formatTime12h(c.time)}
                                                 {c.isSpecial && c.date && (
                                                     <span className="ml-2 text-xs border-l border-brand-green/30 pl-2">
                                                         {new Date(c.date).toLocaleDateString()}

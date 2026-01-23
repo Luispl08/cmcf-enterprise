@@ -7,6 +7,7 @@ import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { Calendar, Clock, User, Users, CheckCircle, XCircle } from 'lucide-react';
+import { formatTime12h } from '@/lib/utils';
 
 const DAYS = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'];
 
@@ -163,7 +164,7 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div>
                                                         <span className={`inline-flex items-center gap-1 text-xs font-bold uppercase px-2 py-1 rounded mb-2 ${c.isSpecial ? 'text-amber-500 bg-amber-500/10' : 'text-brand-green bg-brand-green/10'}`}>
-                                                            <Clock size={12} /> {c.time}
+                                                            <Clock size={12} /> {formatTime12h(c.time)}
                                                         </span>
                                                         <h3 className={`text-xl font-bold ${c.isSpecial ? 'text-amber-500 italic' : 'text-white'}`}>{c.name}</h3>
                                                         <div className="flex items-center text-gray-400 text-sm mt-1">

@@ -8,6 +8,7 @@ import { differenceInDays } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { GymService } from '@/lib/firebase';
 import { GymClass } from '@/types';
+import { formatTime12h } from '@/lib/utils';
 
 // Helper to map days to numbers (Sunday=0, Monday=1...) - matching typical getDay()
 // BUT our GymClass might use 'LUNES', 'MARTES' etc.
@@ -174,7 +175,7 @@ export default function DashboardPage() {
                                 <span className="text-3xl font-display font-bold text-white italic mb-2">{nextClass.name}</span>
                                 <div className="flex items-center gap-2 text-brand-green text-lg font-bold bg-brand-green/10 px-3 py-1 rounded-full">
                                     <Clock size={16} />
-                                    {nextClass.day} {nextClass.time}
+                                    {nextClass.day} {formatTime12h(nextClass.time)}
                                 </div>
                                 <p className="text-sm text-gray-400 mt-2">{nextClass.coachName}</p>
                             </div>

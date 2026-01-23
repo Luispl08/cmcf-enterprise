@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning className="bg-background">
       <body className="bg-noise min-h-screen flex flex-col" suppressHydrationWarning>
         <AuthProvider>
           <Navbar />

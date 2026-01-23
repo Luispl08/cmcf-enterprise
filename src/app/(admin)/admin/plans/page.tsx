@@ -12,6 +12,7 @@ export default function AdminPlansPage() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState<Partial<Plan> | null>(null);
+    const [adminPassword, setAdminPassword] = useState('');
 
     const loadPlans = async () => {
         setLoading(true);
@@ -24,14 +25,7 @@ export default function AdminPlansPage() {
         loadPlans();
     }, []);
 
-    const checkPassword = () => {
-        const pwd = prompt("Ingrese la contraseña de seguridad (admin):");
-        if (pwd !== 'admin123*') {
-            alert("Contraseña incorrecta. Acceso denegado.");
-            return false;
-        }
-        return true;
-    };
+    // Removed checkPassword prompt
 
     const handleEdit = (plan: Plan) => {
         setEditingPlan(plan);
@@ -52,7 +46,12 @@ export default function AdminPlansPage() {
     };
 
     const handleDelete = async (planId: string) => {
-        if (!checkPassword()) return;
+        const pwd = prompt("Para eliminar, ingresa la contraseña de administrador:");
+        if (pwd !== 'admin123*') {
+            alert("Contraseña incorrecta");
+            return;
+        }
+
         if (!confirm("¿Estás seguro de que deseas eliminar este plan?")) return;
 
         try {
@@ -75,7 +74,10 @@ export default function AdminPlansPage() {
             return;
         }
 
-        if (!checkPassword()) return;
+        if (adminPassword !== 'admin123*') {
+            alert("Contraseña de seguridad incorrecta");
+            return;
+        }
 
         try {
             if (editingPlan.id) {
@@ -163,17 +165,21 @@ export default function AdminPlansPage() {
 
             {/* Modal */}
             {isModalOpen && editingPlan && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4">
-                    <div className="bg-neutral-900 border border-gray-800 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                        <div className="p-6">
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-display italic text-white">
-                                    {editingPlan.id ? 'EDITAR PLAN' : 'NUEVO PLAN'}
-                                </h2>
-                                <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-white"><X /></button>
-                            </div>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+                    <div className="bg-neutral-900 border border-gray-800 rounded-lg w-full max-w-lg flex flex-col max-h-[85vh] shadow-2xl animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="flex justify-between items-center p-5 border-b border-gray-800 shrink-0">
+                            <h2 className="text-xl font-display italic text-white">
+                                {editingPlan.id ? 'EDITAR PLAN' : 'NUEVO PLAN'}
+                            </h2>
+                            <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-white transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
 
-                            <form onSubmit={handleSave} className="space-y-4">
+                        {/* Scrollable Content */}
+                        <div className="p-5 overflow-y-auto custom-scrollbar flex-grow">
+                            <form id="planForm" onSubmit={handleSave} className="space-y-4">
                                 <Input
                                     label="Título del Plan"
                                     value={editingPlan.title || ''}
@@ -242,7 +248,7 @@ export default function AdminPlansPage() {
                                         <label className="text-brand-green font-bold text-sm uppercase">Características</label>
                                         <button type="button" onClick={addFeature} className="text-xs text-brand-green hover:underline">+ Agregar</button>
                                     </div>
-                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
                                         {editingPlan.features?.map((f, i) => (
                                             <div key={i} className="flex gap-2">
                                                 <input
@@ -260,12 +266,13 @@ export default function AdminPlansPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex gap-4 pt-4 border-t border-gray-800">
+                                <div className="flex flex-col sm:flex-row gap-4 pt-2">
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="checkbox"
                                             checked={editingPlan.visible}
                                             onChange={e => setEditingPlan({ ...editingPlan, visible: e.target.checked })}
+                                            className="accent-brand-green"
                                         />
                                         <span className="text-gray-300 text-sm">Visible al público</span>
                                     </label>
@@ -274,18 +281,33 @@ export default function AdminPlansPage() {
                                             type="checkbox"
                                             checked={editingPlan.recommended}
                                             onChange={e => setEditingPlan({ ...editingPlan, recommended: e.target.checked })}
+                                            className="accent-brand-green"
                                         />
-                                        <span className="text-gray-300 text-sm">Destacado (Recomendado)</span>
+                                        <span className="text-gray-300 text-sm">Destacado</span>
                                     </label>
                                 </div>
 
-                                <div className="flex justify-end pt-4">
-                                    <Button type="button" variant="outline" className="mr-2" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-                                    <Button type="submit">
-                                        <Save className="mr-2 h-4 w-4" /> GUARDAR
-                                    </Button>
+                                <div className="pt-4 border-t border-gray-800">
+                                    <label className="block text-brand-green font-bold text-sm uppercase mb-2">Contraseña de Administrador *</label>
+                                    <input
+                                        type="password"
+                                        className="w-full bg-neutral-950 border border-gray-800 rounded p-2 text-white text-sm focus:border-brand-green outline-none"
+                                        value={adminPassword}
+                                        onChange={e => setAdminPassword(e.target.value)}
+                                        placeholder="Contraseña de administrador"
+                                        required
+                                    />
+                                    <p className="text-[10px] text-gray-500 mt-1">Requerido para guardar cambios</p>
                                 </div>
                             </form>
+                        </div>
+
+                        {/* Footer - Fixed */}
+                        <div className="p-5 border-t border-gray-800 shrink-0 flex justify-end bg-neutral-900/50 rounded-b-lg">
+                            <Button type="button" variant="outline" className="mr-2" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+                            <Button type="submit" form="planForm">
+                                <Save className="mr-2 h-4 w-4" /> GUARDAR
+                            </Button>
                         </div>
                     </div>
                 </div>

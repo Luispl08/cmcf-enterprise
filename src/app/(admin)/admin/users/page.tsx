@@ -69,47 +69,49 @@ export default function AdminUsersPage() {
             </div>
 
             <div className="bg-neutral-900 border border-gray-800 overflow-hidden rounded-lg">
-                <table className="w-full text-left">
-                    <thead className="bg-black text-gray-400 font-display italic text-sm uppercase">
-                        <tr>
-                            <th className="p-4 font-normal">Atleta</th>
-                            <th className="p-4 font-normal">ID / Contacto</th>
-                            <th className="p-4 font-normal">Estado</th>
-                            <th className="p-4 font-normal">Vencimiento</th>
-                            <th className="p-4 font-normal text-right">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-800 text-sm">
-                        {filteredUsers.map(u => (
-                            <tr key={u.uid} className="hover:bg-white/5 transition-colors group">
-                                <td className="p-4">
-                                    <div className="font-bold text-white uppercase">{u.fullName}</div>
-                                    <div className="text-gray-500 text-xs">{u.email}</div>
-                                </td>
-                                <td className="p-4 text-gray-300">
-                                    <div className="font-mono text-xs text-brand-green">{u.cedula || 'S/N'}</div>
-                                    <div className="text-gray-500 text-xs">{u.phone || '-'}</div>
-                                </td>
-                                <td className="p-4">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${u.membershipStatus === 'active' ? 'bg-green-900/30 text-brand-green' : 'bg-red-900/30 text-red-500'}`}>
-                                        {u.membershipStatus}
-                                    </span>
-                                </td>
-                                <td className="p-4 text-gray-400 font-mono">
-                                    {u.membershipExpiry ? new Date(u.membershipExpiry).toLocaleDateString() : '-'}
-                                </td>
-                                <td className="p-4 text-right">
-                                    <button
-                                        onClick={() => setEditingUser(u)}
-                                        className="text-brand-green hover:underline text-xs"
-                                    >
-                                        EDITAR
-                                    </button>
-                                </td>
+                <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left min-w-[800px]">
+                        <thead className="bg-black text-gray-400 font-display italic text-sm uppercase">
+                            <tr>
+                                <th className="p-4 font-normal">Atleta</th>
+                                <th className="p-4 font-normal">ID / Contacto</th>
+                                <th className="p-4 font-normal">Estado</th>
+                                <th className="p-4 font-normal">Vencimiento</th>
+                                <th className="p-4 font-normal text-right">Acciones</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-800 text-sm">
+                            {filteredUsers.map(u => (
+                                <tr key={u.uid} className="hover:bg-white/5 transition-colors group">
+                                    <td className="p-4">
+                                        <div className="font-bold text-white uppercase">{u.fullName}</div>
+                                        <div className="text-gray-500 text-xs">{u.email}</div>
+                                    </td>
+                                    <td className="p-4 text-gray-300">
+                                        <div className="font-mono text-xs text-brand-green">{u.cedula || 'S/N'}</div>
+                                        <div className="text-gray-500 text-xs">{u.phone || '-'}</div>
+                                    </td>
+                                    <td className="p-4">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${u.membershipStatus === 'active' ? 'bg-green-900/30 text-brand-green' : 'bg-red-900/30 text-red-500'}`}>
+                                            {u.membershipStatus}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-gray-400 font-mono">
+                                        {u.membershipExpiry ? new Date(u.membershipExpiry).toLocaleDateString() : '-'}
+                                    </td>
+                                    <td className="p-4 text-right">
+                                        <button
+                                            onClick={() => setEditingUser(u)}
+                                            className="text-brand-green hover:underline text-xs"
+                                        >
+                                            EDITAR
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* EDIT STATUS MODAL */}

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+// Force deploy update
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { GymService } from '@/lib/firebase';
@@ -75,7 +76,7 @@ export default function PaymentWizard({ selectedPlan, itemData, type = 'membersh
         GymService.getGymConfig().then(setConfig);
         GymService.getExchangeRates().then(setRates);
         setPayAmount(item.price);
-    }, [item]);
+    }, [item.id, item.price]);
 
     const handleMethodSelect = (m: PaymentMethod) => {
         setMethod(m);

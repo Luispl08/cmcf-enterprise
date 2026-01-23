@@ -1,13 +1,22 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
-import { BicepsFlexed, Menu, X, User } from 'lucide-react';
+import { Menu, X, User } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export default function Navbar() {
     const { user, logout } = useAppStore();
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
+
+    const handleLogout = () => {
+        logout();
+        setIsOpen(false);
+        router.push('/');
+    };
 
     return (
         <nav className="sticky top-0 z-50 bg-black/95 border-b border-white/10 backdrop-blur-md">
@@ -15,10 +24,14 @@ export default function Navbar() {
 
                 {/* Logo */}
                 <Link href="/" className="flex items-center group">
-                    <BicepsFlexed className="text-brand-green h-8 w-8 group-hover:rotate-12 transition-transform" />
-                    <div className="ml-2 flex flex-col">
-                        <span className="font-display text-2xl tracking-widest text-white italic leading-none">CMCF</span>
-                        <span className="font-display text-[0.6rem] tracking-[0.3em] text-brand-green uppercase leading-none">FITNESS CENTER</span>
+                    <div className="relative w-32 h-32 group-hover:rotate-12 transition-transform -ml-4 mt-4">
+                        <Image
+                            src="/logo.png"
+                            alt="CMCF Logo"
+                            fill
+                            className="object-contain"
+                            sizes="128px"
+                        />
                     </div>
                 </Link>
 
@@ -43,7 +56,7 @@ export default function Navbar() {
                                     ADMIN
                                 </Link>
                             )}
-                            <button onClick={logout} className="text-xs text-gray-500 hover:text-white font-mono uppercase">
+                            <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-white font-mono uppercase">
                                 Salir
                             </button>
                         </>
@@ -65,7 +78,7 @@ export default function Navbar() {
                         <>
                             <Link href="/dashboard" onClick={() => setIsOpen(false)} className="py-2 text-brand-green font-display italic text-xl">MI DASHBOARD</Link>
                             {user.role === 'admin' && <Link href="/admin" onClick={() => setIsOpen(false)} className="py-2 text-red-500 font-display italic text-xl">ADMIN</Link>}
-                            <button onClick={() => { logout(); setIsOpen(false) }} className="py-2 text-gray-500">Cerrar Sesión</button>
+                            <button onClick={handleLogout} className="py-2 text-gray-500">Cerrar Sesión</button>
                         </>
                     ) : (
                         <Link href="/login" onClick={() => setIsOpen(false)} className="py-2 bg-brand-green text-black font-display font-bold italic">ENTRAR</Link>

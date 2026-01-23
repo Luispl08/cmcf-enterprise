@@ -29,7 +29,7 @@ export default function AdminDashboard() {
                 DASHBOARD <span className="text-brand-green">GENERAL</span>
             </h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <StatsCard
                     title="Usuarios Activos (Real)"
                     value={loading ? "..." : stats.activeUsers.toString()}
@@ -43,11 +43,6 @@ export default function AdminDashboard() {
                     icon={Activity}
                     trend={new Date().toLocaleDateString()}
                     trendUp={true}
-                />
-                <StatsCard
-                    title="Tasa Retención"
-                    value="100%"
-                    icon={TrendingUp}
                 />
             </div>
 

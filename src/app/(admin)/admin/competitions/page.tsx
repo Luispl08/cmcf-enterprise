@@ -88,118 +88,131 @@ export default function AdminCompetitionsPage() {
 
             {/* MODAL: NEW COMPETITION */}
             {isAdding && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <Card className="max-w-md w-full relative max-h-[90vh] overflow-y-auto custom-scrollbar">
-                        <h2 className="text-xl font-bold text-white mb-4">Nueva Competencia</h2>
-                        <form onSubmit={handleAdd} className="space-y-4">
-                            <Input label="Nombre" value={newComp.name} onChange={e => setNewComp({ ...newComp, name: e.target.value })} required />
-                            <Input label="Descripción" value={newComp.description} onChange={e => setNewComp({ ...newComp, description: e.target.value })} required />
-                            <Input
-                                label="Fecha"
-                                type="date"
-                                value={new Date(newComp.date || Date.now()).toISOString().split('T')[0]}
-                                onChange={e => setNewComp({ ...newComp, date: new Date(e.target.value).getTime() })}
-                                required
-                            />
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                    <div className="bg-neutral-900 border border-gray-800 rounded-lg w-full max-w-md flex flex-col max-h-[85vh] shadow-2xl animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="p-5 border-b border-gray-800 shrink-0 flex justify-between items-center">
+                            <h2 className="text-xl font-bold text-white">Nueva Competencia</h2>
+                            <button onClick={() => setIsAdding(false)} className="text-gray-500 hover:text-white transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                        {/* Scrollable Content */}
+                        <div className="p-5 overflow-y-auto custom-scrollbar flex-grow">
+                            <form id="compForm" onSubmit={handleAdd} className="space-y-4">
+                                <Input label="Nombre" value={newComp.name} onChange={e => setNewComp({ ...newComp, name: e.target.value })} required />
+                                <Input label="Descripción" value={newComp.description} onChange={e => setNewComp({ ...newComp, description: e.target.value })} required />
+                                <Input
+                                    label="Fecha"
+                                    type="date"
+                                    value={new Date(newComp.date || Date.now()).toISOString().split('T')[0]}
+                                    onChange={e => setNewComp({ ...newComp, date: new Date(e.target.value).getTime() })}
+                                    required
+                                />
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Tipo</label>
+                                        <select
+                                            className="w-full bg-neutral-900 border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
+                                            value={newComp.type}
+                                            onChange={e => setNewComp({ ...newComp, type: e.target.value as any })}
+                                        >
+                                            <option value="individual">Individual</option>
+                                            <option value="team">Equipos</option>
+                                        </select>
+                                    </div>
+                                    {newComp.type === 'team' && (
+                                        <div className="animate-in fade-in slide-in-from-left-2">
+                                            <Input
+                                                label="Tamaño Equipo"
+                                                type="number"
+                                                value={String(newComp.teamSize || 2)}
+                                                onChange={e => setNewComp({ ...newComp, teamSize: Number(e.target.value) })}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Tipo</label>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Categoría</label>
                                     <select
                                         className="w-full bg-neutral-900 border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
-                                        value={newComp.type}
-                                        onChange={e => setNewComp({ ...newComp, type: e.target.value as any })}
+                                        value={newComp.category}
+                                        onChange={e => setNewComp({ ...newComp, category: e.target.value as any })}
                                     >
-                                        <option value="individual">Individual</option>
-                                        <option value="team">Equipos</option>
+                                        <option value="male">Masculino</option>
+                                        <option value="female">Femenino</option>
+                                        <option value="mixed">Mixto</option>
                                     </select>
                                 </div>
-                                {newComp.type === 'team' && (
+
+                                <div className="space-y-1">
                                     <Input
-                                        label="Tamaño Equipo"
+                                        label="Capacidad (Equipos/Personas)"
                                         type="number"
-                                        value={String(newComp.teamSize || 2)}
-                                        onChange={e => setNewComp({ ...newComp, teamSize: Number(e.target.value) })}
+                                        value={String(newComp.capacity)}
+                                        onChange={e => setNewComp({ ...newComp, capacity: Number(e.target.value) })}
+                                        required={!newComp.isUnlimited}
+                                        disabled={newComp.isUnlimited}
                                     />
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Categoría</label>
-                                <select
-                                    className="w-full bg-neutral-900 border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
-                                    value={newComp.category}
-                                    onChange={e => setNewComp({ ...newComp, category: e.target.value as any })}
-                                >
-                                    <option value="male">Masculino</option>
-                                    <option value="female">Femenino</option>
-                                    <option value="mixed">Mixto</option>
-                                </select>
-                            </div>
-
-                            <div className="space-y-1">
-                                <Input
-                                    label="Capacidad (Equipos/Personas)"
-                                    type="number"
-                                    value={String(newComp.capacity)}
-                                    onChange={e => setNewComp({ ...newComp, capacity: Number(e.target.value) })}
-                                    required={!newComp.isUnlimited}
-                                    disabled={newComp.isUnlimited}
-                                />
-                                <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={newComp.isUnlimited || false}
-                                        onChange={e => setNewComp({ ...newComp, isUnlimited: e.target.checked })}
-                                        className="accent-brand-green"
-                                    />
-                                    Cupos Ilimitados
-                                </label>
-                            </div>
-
-                            {/* PAID OPTIONS */}
-                            <div className="pt-4 border-t border-gray-800">
-                                <label className="flex items-center gap-2 text-sm font-bold text-white cursor-pointer mb-3">
-                                    <input
-                                        type="checkbox"
-                                        checked={newComp.isPaid || false}
-                                        onChange={e => setNewComp({ ...newComp, isPaid: e.target.checked })}
-                                        className="accent-brand-green w-4 h-4"
-                                    />
-                                    COMPETENCIA PAGA
-                                </label>
-
-                                {newComp.isPaid && (
-                                    <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
-                                        <Input
-                                            label="Precio"
-                                            type="number"
-                                            value={String(newComp.price || 0)}
-                                            onChange={e => setNewComp({ ...newComp, price: Number(e.target.value) })}
-                                            required
+                                    <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer mt-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={newComp.isUnlimited || false}
+                                            onChange={e => setNewComp({ ...newComp, isUnlimited: e.target.checked })}
+                                            className="accent-brand-green"
                                         />
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Moneda</label>
-                                            <select
-                                                className="w-full bg-neutral-900 border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
-                                                value={newComp.currency || '$'}
-                                                onChange={e => setNewComp({ ...newComp, currency: e.target.value })}
-                                            >
-                                                <option value="$">USD ($)</option>
-                                                <option value="€">EUR (€)</option>
-                                                <option value="Bs">W (Bs)</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                                        Cupos Ilimitados
+                                    </label>
+                                </div>
 
-                            <div className="flex gap-2 mt-6">
-                                <Button type="button" variant="outline" className="flex-1" onClick={() => setIsAdding(false)}>CANCELAR</Button>
-                                <Button type="submit" className="flex-1">CREAR</Button>
-                            </div>
-                        </form>
-                    </Card>
+                                {/* PAID OPTIONS */}
+                                <div className="pt-4 border-t border-gray-800">
+                                    <label className="flex items-center gap-2 text-sm font-bold text-white cursor-pointer mb-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={newComp.isPaid || false}
+                                            onChange={e => setNewComp({ ...newComp, isPaid: e.target.checked })}
+                                            className="accent-brand-green w-4 h-4"
+                                        />
+                                        COMPETENCIA PAGA
+                                    </label>
+
+                                    {newComp.isPaid && (
+                                        <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                                            <Input
+                                                label="Precio"
+                                                type="number"
+                                                value={String(newComp.price || 0)}
+                                                onChange={e => setNewComp({ ...newComp, price: Number(e.target.value) })}
+                                                required
+                                            />
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Moneda</label>
+                                                <select
+                                                    className="w-full bg-neutral-900 border border-gray-700 text-white p-3 rounded focus:border-brand-green outline-none"
+                                                    value={newComp.currency || '$'}
+                                                    onChange={e => setNewComp({ ...newComp, currency: e.target.value })}
+                                                >
+                                                    <option value="$">USD ($)</option>
+                                                    <option value="€">EUR (€)</option>
+                                                    <option value="Bs">W (Bs)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-5 border-t border-gray-800 shrink-0 flex gap-2 justify-end bg-neutral-900/50 rounded-b-lg">
+                            <Button type="button" variant="outline" onClick={() => setIsAdding(false)}>CANCELAR</Button>
+                            <Button type="submit" form="compForm">CREAR</Button>
+                        </div>
+                    </div>
                 </div>
             )}
 

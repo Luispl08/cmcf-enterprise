@@ -3,6 +3,7 @@ import Card from "@/components/ui/Card";
 import Link from 'next/link';
 import { GymService } from "@/lib/firebase";
 import { Zap, Trophy, HeartPulse, Star } from 'lucide-react';
+import { formatTime12h } from "@/lib/utils";
 
 export const revalidate = 60;
 
@@ -22,7 +23,7 @@ export default async function Home() {
             ROMPE TUS <br /> <span className="text-transparent bg-clip-text bg-gradient-to-b from-brand-green to-green-700 stroke-white">LÍMITES</span>
           </h1>
           <div className="flex flex-col md:flex-row gap-4 justify-center mt-8">
-            <Link href="/register">
+            <Link href="/login">
               <Button size="lg" className="text-xl px-8">EMPEZAR AHORA</Button>
             </Link>
             <Link href="/competitions">
@@ -60,34 +61,34 @@ export default async function Home() {
 
       {/* Special Events Section */}
       {classes.some(c => c.isSpecial && c.date && c.date >= Date.now() - 86400000) && (
-        <section className="py-20 bg-neutral-900 border-t border-white/5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none"></div>
-          <div className="max-w-7xl mx-auto px-4 relative z-10">
-            <h2 className="text-3xl md:text-5xl font-display font-bold italic text-white mb-12 uppercase text-center">
+        <section className="py-10 bg-neutral-900 border-t border-white/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+          <div className="max-w-5xl mx-auto px-4 relative z-10">
+            <h2 className="text-2xl md:text-4xl font-display font-bold italic text-white mb-8 uppercase text-center">
               EVENTOS <span className="text-amber-500">ESPECIALES</span>
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {classes
                 .filter(c => c.isSpecial && c.date && c.date >= Date.now() - 86400000)
                 .sort((a, b) => (a.date || 0) - (b.date || 0))
                 .map(c => (
-                  <div key={c.id} className="bg-black/50 p-6 rounded-lg border border-amber-500/50 hover:border-amber-500 hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-all group relative">
-                    <div className="absolute top-0 right-0 bg-amber-500 text-black text-[10px] font-bold px-3 py-1 rounded-bl">
+                  <div key={c.id} className="bg-black/50 p-4 rounded-lg border border-amber-500/50 hover:border-amber-500 hover:shadow-[0_0_20px_rgba(245,158,11,0.2)] transition-all group relative">
+                    <div className="absolute top-0 right-0 bg-amber-500 text-black text-[9px] font-bold px-2 py-0.5 rounded-bl">
                       {new Date(c.date!).toLocaleDateString()}
                     </div>
-                    <div className="mb-4">
-                      <p className="text-2xl font-display italic text-white group-hover:text-amber-500 transition-colors">{c.name}</p>
-                      <p className="text-sm text-gray-400 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                    <div className="mb-3">
+                      <p className="text-xl font-display italic text-white group-hover:text-amber-500 transition-colors">{c.name}</p>
+                      <p className="text-xs text-gray-400 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                         {c.coachName}
                       </p>
                     </div>
-                    <div className="flex justify-between items-end border-t border-white/10 pt-4">
-                      <div className="text-amber-500 font-mono text-lg bg-amber-500/10 px-3 py-1 rounded">
-                        {c.time}
+                    <div className="flex justify-between items-end border-t border-white/10 pt-3">
+                      <div className="text-amber-500 font-mono text-sm bg-amber-500/10 px-2 py-0.5 rounded">
+                        {formatTime12h(c.time)}
                       </div>
                       <Link href={`/classes?action=book&id=${c.id}`}>
-                        <Button size="sm" variant="outline" className="border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-black">
+                        <Button size="sm" variant="outline" className="h-8 text-xs border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-black">
                           RESERVAR
                         </Button>
                       </Link>
@@ -100,33 +101,33 @@ export default async function Home() {
       )}
 
       {/* Schedule (Public - Regular Only) */}
-      <section className="py-24 bg-black relative border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl md:text-5xl font-display font-bold italic text-white mb-12 uppercase text-center">
+      <section className="py-10 bg-black relative border-t border-white/5">
+        <div className="max-w-5xl mx-auto px-4">
+          <h2 className="text-2xl md:text-4xl font-display font-bold italic text-white mb-8 uppercase text-center">
             NUESTRAS <span className="text-brand-green">CLASES</span>
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {DAYS.map(day => {
               // Filter: Only Regular classes (not special)
               const dayClasses = classes.filter(c => !c.isSpecial && c.day === day).sort((a, b) => a.time.localeCompare(b.time));
               if (dayClasses.length === 0) return null;
 
               return (
-                <div key={day} className="bg-neutral-900/30 p-6 rounded-lg border border-white/5 hover:border-brand-green/20 transition-colors">
-                  <h3 className="text-2xl font-display italic text-brand-green mb-6 border-b border-white/10 pb-2">{day}</h3>
-                  <div className="space-y-4">
+                <div key={day} className="bg-neutral-900/30 p-4 rounded-lg border border-white/5 hover:border-brand-green/20 transition-colors">
+                  <h3 className="text-xl font-display italic text-brand-green mb-3 border-b border-white/10 pb-2">{day}</h3>
+                  <div className="space-y-2">
                     {dayClasses.map(c => (
-                      <div key={c.id} className="flex justify-between items-start group">
+                      <div key={c.id} className="flex justify-between items-center group">
                         <div>
-                          <p className="text-white font-bold text-lg group-hover:text-brand-green transition-colors">{c.name}</p>
-                          <p className="text-sm text-gray-500">{c.coachName}</p>
+                          <p className="text-white font-bold text-sm group-hover:text-brand-green transition-colors">{c.name}</p>
+                          <p className="text-xs text-gray-500">{c.coachName}</p>
                         </div>
                         <div className="text-right">
-                          <span className="block text-brand-green font-mono text-sm bg-brand-green/10 px-2 py-1 rounded">
-                            {c.time}
+                          <span className="block text-brand-green font-mono text-xs bg-brand-green/10 px-2 py-0.5 rounded">
+                            {formatTime12h(c.time)}
                           </span>
-                          {c.isUnlimited && <span className="text-[10px] text-gray-400 uppercase mt-1 block tracking-wider">Ilimitado</span>}
+                          {c.isUnlimited && <span className="text-[9px] text-gray-400 uppercase mt-0.5 block tracking-wider">Ilimitado</span>}
                         </div>
                       </div>
                     ))}
@@ -187,33 +188,35 @@ export default async function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="max-w-7xl mx-auto px-4 py-20 bg-noise relative overflow-hidden">
+      <section className="max-w-5xl mx-auto px-4 py-10 bg-noise relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-green/5 blur-3xl rounded-full pointer-events-none"></div>
-        <h2 className="text-3xl md:text-5xl font-display font-bold italic text-white mb-12 uppercase text-center">
+        <h2 className="text-2xl md:text-4xl font-display font-bold italic text-white mb-8 uppercase text-center">
           OPINIÓN DE <span className="text-brand-green">USUARIOS</span>
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {reviews.length > 0 ? (
             reviews.map((review) => (
-              <Card key={review.id} noPadding className="flex flex-col md:flex-row h-full">
-                <div className="w-full md:w-1/3 bg-gray-800 min-h-[200px] md:min-h-0 relative">
+              <Card key={review.id} noPadding className="flex flex-col md:flex-row h-full max-h-[160px]">
+                <div className="w-full md:w-1/4 bg-gray-800 relative hidden md:block">
                   {review.userPhotoUrl ? (
                     <img src={review.userPhotoUrl} alt={review.userName} className="w-full h-full object-cover grayscale" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-500 font-display text-4xl italic">
+                    <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-500 font-display text-2xl italic">
                       {review.userName.charAt(0)}
                     </div>
                   )}
                 </div>
-                <div className="p-8 w-full md:w-2/3 flex flex-col justify-center">
-                  <div className="flex text-brand-green mb-4">
+                <div className="p-4 w-full md:w-3/4 flex flex-col justify-center">
+                  <div className="flex text-brand-green mb-2">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} fill="currentColor" size={16} className={i < review.rating ? "text-brand-green" : "text-gray-700"} />
+                      <Star key={i} fill="currentColor" size={12} className={i < review.rating ? "text-brand-green" : "text-gray-700"} />
                     ))}
                   </div>
-                  <p className="text-gray-300 italic mb-4">"{review.comment}"</p>
-                  <p className="font-display text-white text-lg">- {review.userName}</p>
-                  <p className="text-xs text-gray-500 mt-2">{new Date(review.date).toLocaleDateString('es-ES')}</p>
+                  <p className="text-gray-300 italic mb-2 text-sm line-clamp-2">"{review.comment}"</p>
+                  <div>
+                    <p className="font-display text-white text-sm">- {review.userName}</p>
+                    <p className="text-[10px] text-gray-500">{new Date(review.date).toLocaleDateString('es-ES')}</p>
+                  </div>
                 </div>
               </Card>
             ))

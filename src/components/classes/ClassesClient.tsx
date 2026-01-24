@@ -44,9 +44,15 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
     };
 
     useEffect(() => {
+        let mounted = true;
         if (user?.uid) {
-            GymService.getUserBookings(user.uid).then(setBookedClassIds);
+            GymService.getUserBookings(user.uid)
+                .then(ids => {
+                    if (mounted) setBookedClassIds(ids);
+                })
+                .catch(err => console.error("Error loading bookings:", err));
         }
+        return () => { mounted = false; };
     }, [user?.uid]);
 
     const searchParams = useSearchParams();

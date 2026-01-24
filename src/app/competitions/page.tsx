@@ -27,18 +27,31 @@ function CompetitionsContent() {
     const idParam = searchParams.get('id');
 
     useEffect(() => {
-        const load = async () => {
-            const data = await GymService.getCompetitions();
-            setCompetitions(data);
-
-            if (user) {
-                const regs = await GymService.getUserCompetitions(user.uid);
-                setUserRegistrations(regs);
+        const fetchPublicData = async () => {
+            try {
+                const data = await GymService.getCompetitions();
+                setCompetitions(data);
+            } catch (error) {
+                console.error("Error fetching competitions:", error);
+            } finally {
+                setLoading(false);
             }
-
-            setLoading(false);
         };
-        load();
+        fetchPublicData();
+    }, []);
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (user) {
+                try {
+                    const regs = await GymService.getUserCompetitions(user.uid);
+                    setUserRegistrations(regs);
+                } catch (error) {
+                    console.error("Error fetching user registrations:", error);
+                }
+            }
+        };
+        fetchUserData();
     }, [user]);
 
     // Auto-Join Effect
@@ -189,8 +202,8 @@ function CompetitionsContent() {
                                                         `${comp.capacity - comp.registeredCount} cupos disponibles`}
                                             </div>
                                             {isRegistered && (
-                                                <div className="mt-2 text-brand-green font-bold text-sm uppercase">
-                                                    Estado: {userReg?.status === 'pending_payment' ? 'Pago Pendiente' : 'Inscrito'}
+                                                <div className={`mt-2 font-bold text-sm uppercase ${isPendingPayment ? 'text-yellow-500' : 'text-brand-green'}`}>
+                                                    {isPendingPayment ? '⚠️ PAGO PENDIENTE' : '✅ YA ESTÁS INSCRITO'}
                                                 </div>
                                             )}
                                         </div>
@@ -219,7 +232,7 @@ function CompetitionsContent() {
                                             variant={isPendingPayment ? 'outline' : 'primary'}
                                         >
                                             {isPendingPayment ? 'PAGAR INSCRIPCIÓN' :
-                                                isRegistered ? 'YA INSCRITO' :
+                                                isRegistered ? 'INSCRIPCIÓN ACTIVA' :
                                                     (!comp.isUnlimited && comp.registeredCount >= comp.capacity) ? 'SOLD OUT' : 'INSCRIBIRSE'}
                                         </Button>
                                     </Card>

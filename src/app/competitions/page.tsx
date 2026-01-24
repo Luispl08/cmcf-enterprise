@@ -2,12 +2,12 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { GymService } from '@/lib/firebase';
-import { Competition, UserProfile, CompetitionRegistration } from '@/types';
+import { Competition, CompetitionRegistration } from '@/types';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
-import { Trophy, Calendar, Users, MapPin, Search, X } from 'lucide-react';
+import { Trophy, Calendar, Users, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 

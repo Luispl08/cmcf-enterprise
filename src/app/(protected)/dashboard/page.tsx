@@ -3,7 +3,7 @@ import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { useRouter } from 'next/navigation';
-import { Calendar, AlertTriangle, CheckCircle, Clock, Star, Trophy } from 'lucide-react';
+import { Calendar, AlertTriangle, CheckCircle, Clock, Trophy } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { GymService } from '@/lib/firebase';

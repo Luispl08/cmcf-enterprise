@@ -6,7 +6,7 @@ import { GymClass } from '@/types';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import { Calendar, Clock, User, Users, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, User, Users, CheckCircle } from 'lucide-react';
 import { formatTime12h } from '@/lib/utils';
 
 const DAYS = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'];

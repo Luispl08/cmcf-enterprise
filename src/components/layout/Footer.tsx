@@ -31,7 +31,7 @@ export default function Footer() {
 
                     <div className="flex items-center gap-3 pl-8 md:border-l border-white/10">
                         <h3 className="font-display text-sm italic text-brand-green hidden md:block">Síguenos</h3>
-                        <a href="https://www.instagram.com/cmcfitnesscenter?igsh=Mm5maHNvM3ZsYW84" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 rounded-full hover:bg-brand-green hover:text-black transition-colors group">
+                        <a href="https://www.instagram.com/cmcfitnesscenter" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 rounded-full hover:bg-brand-green hover:text-black transition-colors group">
                             <Instagram size={24} className="group-hover:scale-110 transition-transform" />
                         </a>
                     </div>

@@ -187,6 +187,12 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
                                                             {c.isUnlimited ? <span className="text-brand-green font-bold">ILIMITADO</span> : `${c.bookedCount} / ${c.capacity}`}
                                                         </span>
                                                     </div>
+                                                    {isBooked && (
+                                                        <div className="mt-2 font-bold text-sm text-brand-green uppercase flex items-center gap-1">
+                                                            <CheckCircle size={14} /> ✅ YA ESTÁS INSCRITO
+                                                        </div>
+                                                    )}
+
                                                     {!c.isUnlimited && (
                                                         <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
                                                             <div

@@ -189,7 +189,7 @@ export default function ClassesClient({ initialClasses }: ClassesClientProps) {
                                                     </div>
                                                     {isBooked && (
                                                         <div className="mt-2 font-bold text-sm text-brand-green uppercase flex items-center gap-1">
-                                                            <CheckCircle size={14} /> ✅ YA ESTÁS INSCRITO
+                                                            <CheckCircle size={14} /> INSCRITO
                                                         </div>
                                                     )}
 

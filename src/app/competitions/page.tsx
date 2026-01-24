@@ -226,8 +226,11 @@ function CompetitionsContent() {
 
                                                 if (isRegistered) return; // Should be disabled
 
+                                                // Initialize team members properly
+                                                const membersNeeded = (comp.teamSize || 1) - 1;
+                                                console.log('Opening modal for:', comp.name, 'Team size:', comp.teamSize, 'Members needed:', membersNeeded);
                                                 setSelectedComp(comp);
-                                                setTeamMembers(Array.from({ length: (comp.teamSize || 1) - 1 }, () => ({ name: '', cedula: '' })));
+                                                setTeamMembers(Array.from({ length: Math.max(membersNeeded, 0) }, () => ({ name: '', cedula: '' })));
                                             }}
                                             variant={isPendingPayment ? 'outline' : 'primary'}
                                         >
@@ -276,7 +279,10 @@ function CompetitionsContent() {
                                     />
 
                                     <div className="space-y-3">
-                                        <label className="block text-sm font-bold text-gray-400">Integrantes Adicionales</label>
+                                        <label className="block text-sm font-bold text-gray-400">Integrantes Adicionales ({teamMembers.length} miembros)</label>
+                                        {teamMembers.length === 0 && (
+                                            <p className="text-xs text-yellow-500">No se requieren miembros adicionales para este equipo.</p>
+                                        )}
                                         {teamMembers.map((member, idx) => (
                                             <div key={idx} className="grid grid-cols-2 gap-2">
                                                 <Input

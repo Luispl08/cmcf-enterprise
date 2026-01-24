@@ -30,81 +30,76 @@ export default function DashboardPage() {
     const daysRemaining = user.membershipExpiry ? differenceInDays(new Date(user.membershipExpiry), new Date()) : 0;
     const isExpiringSoon = isMembershipActive && daysRemaining <= 3 && daysRemaining >= 0;
 
-    const fetchNextClass = async () => {
-        if (!user) return;
-        setLoadingClass(true);
-        try {
-            // Get bookings directly. We assume we want to show the specific Class instance the user has booked.
-            // However, the current system seems to link bookings to 'Class IDs' which recur weekly.
-            // So we need to find the *next occurrence* of that class.
+    useEffect(() => {
+        const fetchNextClass = async () => {
+            if (!user) return;
+            setLoadingClass(true);
+            try {
+                // Get bookings directly. We assume we want to show the specific Class instance the user has booked.
+                // However, the current system seems to link bookings to 'Class IDs' which recur weekly.
+                // So we need to find the *next occurrence* of that class.
 
-            const [allClasses, bookedIds] = await Promise.all([
-                GymService.getClasses(),
-                GymService.getUserBookings(user.uid)
-            ]);
+                const [allClasses, bookedIds] = await Promise.all([
+                    GymService.getClasses(),
+                    GymService.getUserBookings(user.uid)
+                ]);
 
-            const userClasses = allClasses.filter(c => bookedIds.includes(c.id));
+                const userClasses = allClasses.filter(c => bookedIds.includes(c.id));
 
-            if (userClasses.length === 0) {
-                setNextClass(null);
-                setLoadingClass(false);
-                return;
-            }
-
-            const now = new Date();
-            const currentDayIndex = now.getDay(); // 0 = Sunday, 1 = Monday...
-
-            // Calculate next occurrence date for each booked class
-            const upcomingClasses = userClasses.map(c => {
-                const targetDayIndex = DAY_MAP[c.day.toUpperCase()];
-                if (targetDayIndex === undefined) return null;
-
-                // Calculate days until next occurrence
-                let daysUntil = targetDayIndex - currentDayIndex;
-
-                // Parse Time
-                const [timePart, period] = c.time.split(' ');
-                let [hours, minutes] = timePart.split(':').map(Number);
-                if (period === 'PM' && hours !== 12) hours += 12;
-                if (period === 'AM' && hours === 12) hours = 0;
-
-                const classDate = new Date(now);
-                classDate.setHours(hours, minutes, 0, 0);
-
-                // If it's today (daysUntil == 0) and time has passed, move to next week
-                if (daysUntil === 0 && classDate < now) {
-                    daysUntil = 7;
-                } else if (daysUntil < 0) {
-                    // It's in the past relative to weekday, so it's next week
-                    daysUntil += 7;
+                if (userClasses.length === 0) {
+                    setNextClass(null);
+                    setLoadingClass(false);
+                    return;
                 }
 
-                // Set final date
-                classDate.setDate(now.getDate() + daysUntil);
-                return { ...c, date: classDate };
-            }).filter((c): c is (GymClass & { date: Date }) => c !== null);
+                const now = new Date();
+                const currentDayIndex = now.getDay(); // 0 = Sunday, 1 = Monday...
 
-            // Sort by date/time ascending
-            upcomingClasses.sort((a, b) => a.date.getTime() - b.date.getTime());
+                // Calculate next occurrence date for each booked class
+                const upcomingClasses = userClasses.map(c => {
+                    const targetDayIndex = DAY_MAP[c.day.toUpperCase()];
+                    if (targetDayIndex === undefined) return null;
 
-            setNextClass(upcomingClasses[0] || null);
+                    // Calculate days until next occurrence
+                    let daysUntil = targetDayIndex - currentDayIndex;
 
-        } catch (error) {
-            console.error("Error fetching next class", error);
-        } finally {
-            setLoadingClass(false);
+                    // Parse Time
+                    const [timePart, period] = c.time.split(' ');
+                    let [hours, minutes] = timePart.split(':').map(Number);
+                    if (period === 'PM' && hours !== 12) hours += 12;
+                    if (period === 'AM' && hours === 12) hours = 0;
+
+                    const classDate = new Date(now);
+                    classDate.setHours(hours, minutes, 0, 0);
+
+                    // If it's today (daysUntil == 0) and time has passed, move to next week
+                    if (daysUntil === 0 && classDate < now) {
+                        daysUntil = 7;
+                    } else if (daysUntil < 0) {
+                        // It's in the past relative to weekday, so it's next week
+                        daysUntil += 7;
+                    }
+
+                    // Set final date
+                    classDate.setDate(now.getDate() + daysUntil);
+                    return { ...c, date: classDate };
+                }).filter((c): c is (GymClass & { date: Date }) => c !== null);
+
+                // Sort by date/time ascending
+                upcomingClasses.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+                setNextClass(upcomingClasses[0] || null);
+
+            } catch (error) {
+                console.error("Error fetching next class", error);
+            } finally {
+                setLoadingClass(false);
+            }
+        };
+
+        if (user?.uid) {
+            fetchNextClass();
         }
-    };
-
-    if (user?.uid) {
-        fetchNextClass();
-    }
-}, [user?.uid]);
-
-
-return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6 flex-wrap">
             <div>
                 <h1 className="text-4xl font-display font-bold italic text-white mb-2">
@@ -229,7 +224,7 @@ return (
             {/* Next Competition Widget */}
             <NextCompetitionCard user={user} />
         </div>
-    </div>
+    </div >
 );
 }
 
